@@ -140,4 +140,19 @@ public class SieveResponse {
     public void setMessage(String message) {
         this.message = message;
     }
+    
+    @Override
+    public String toString() {
+        StringBuilder result = new StringBuilder();
+        result.append(type.toString());
+        if (code != null) {
+            result.append(" (").append(code.toString()).append(")");
+        }
+        if (message != null) {
+            result.append(" \"").append(message).append("\"");
+        }
+        
+        return result.toString();
+    }
+        
 }

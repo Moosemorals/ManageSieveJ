@@ -24,15 +24,18 @@
 package com.fluffypeople.managesieve;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.StreamTokenizer;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.nio.charset.Charset;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
+import java.util.List;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
@@ -53,6 +56,7 @@ import org.apache.log4j.Logger;
 public class SieveServer {
 
     private static final Logger log = Logger.getLogger(SieveServer.class);
+    private static final Charset UTF8 = Charset.forName("UTF-8");
     private Socket socket = null;
     private SSLSocket secureSocket = null;
     private ServerCapabilities cap;
@@ -63,8 +67,8 @@ public class SieveServer {
     private static final String CRLF = "\r\n";
     private static final char SP = ' ';
     private StreamTokenizer in;
+    private InputStream byteStream;
     private PrintWriter out;
-    
 
     /**
      *
@@ -179,14 +183,15 @@ public class SieveServer {
      *                 PasswordCallback passwd = (PasswordCallback) cb;
      *                 passwd.setPassword("secret".toCharArray());
      *             }
-     *         }
-     *     }
-     * }; 
      * }
-     *</pre>
-     * @param cbh CallbackHandler[] list of calbacks that will be called by the SASL code
-     * @return SieveResponse from the server, OK is aithenticated, NO means a problem
-     * @throws SaslException 
+     * }
+     * }; }
+     * </pre>
+     * @param cbh CallbackHandler[] list of calbacks that will be called by the
+     * SASL code
+     * @return SieveResponse from the server, OK is aithenticated, NO means a
+     * problem
+     * @throws SaslException
      * @throws IOException
      * @throws ParseException
      */
@@ -195,12 +200,10 @@ public class SieveServer {
         SaslClient sc = Sasl.createSaslClient(cap.getSASLMethods(), null, "sieve", "hathor.basement", null, cbh);
 
         String mechanism = escapeString(sc.getMechanismName());
-        log.debug("trying to auth with " + mechanism);
         if (sc.hasInitialResponse()) {
             byte[] ir = sc.evaluateChallenge(new byte[0]);
             String ready = new String(Base64.encodeBase64(ir));
             ready = encodeString(ready.trim());
-            log.debug("Inital response: " + ready);
             sendCommand("AUTHENTICATE", mechanism, ready);
         } else {
             sendCommand("AUTHENTICATE", mechanism);
@@ -209,14 +212,11 @@ public class SieveServer {
         int token;
         SieveResponse resp = null;
         do {
-
-            log.debug("Trying next auth line");
             token = in.nextToken();
             if (token == DQUOTE) {
                 // String - so more data for the auth sequence
                 in.pushBack();
                 String msg = parseString();
-                log.debug("got " + msg + " from server");
                 byte[] response = sc.evaluateChallenge(msg.getBytes());
                 sendLine(encodeString(new String(response)));
             } else if (token == StreamTokenizer.TT_WORD) {
@@ -234,21 +234,25 @@ public class SieveServer {
     }
 
     /**
-     * Load the list of current scripts from the server. Call getServerScripts() 
-     * to get the list returned.
+     * Fetch the list of scripts and load them into scripts. The current
+     * contents of scripts will be lost.
+     * @param scripts LIst<SieveScript> non-null List of scripts. Will be cleared if not zero length, even if there is a problem
      * @return SieveResponse OK - list was fetched, NO - there was a problem.
      * @throws IOException
      * @throws ParseException
      */
-    public SieveResponse listscripts() throws IOException, ParseException {
+    public SieveResponse listscripts(List<SieveScript> scripts) throws IOException, ParseException {
+        if (!scripts.isEmpty()) {
+            scripts.clear();
+        }
         sendCommand("LISTSCRIPTS");
-        SieveResponse response;
         while (true) {
             int token = in.nextToken();
             switch (token) {
                 case DQUOTE:
                 case LEFT_CURRLY_BRACE:
                     in.pushBack();
+
                     String scriptName = parseString();
                     boolean isActive = false;
                     token = in.nextToken();
@@ -262,10 +266,11 @@ public class SieveServer {
                         token = in.nextToken();
                     }
 
-                    if (token != StreamTokenizer.TT_EOL) {
+                    if (token == StreamTokenizer.TT_EOL) {
+                        scripts.add(new SieveScript(scriptName, null, isActive));
+                    } else {
                         throw new ParseException("Expected EOL, got  " + tokenToString(token) + " at line " + in.lineno());
                     }
-                    log.debug("Script " + scriptName + (isActive ? " is active" : " is not active"));
                     break;
                 case StreamTokenizer.TT_WORD:
                     in.pushBack();
@@ -276,57 +281,46 @@ public class SieveServer {
         }
     }
 
-    private void setupAfterConnect(Socket sock) throws IOException {
-        in = new StreamTokenizer(new NoisyReader(new InputStreamReader(sock.getInputStream())));
-        setTokenizerNormal();
-        out = new PrintWriter(new OutputStreamWriter(sock.getOutputStream()));
-    }
-
-    private String escapeString(final String raw) {
-        StringBuilder result = new StringBuilder();
-        result.append(DQUOTE);
-        result.append(raw);
-        result.append(DQUOTE);
-        return result.toString();
-
-    }
 
     /**
-     * Turn a string into a {'length'+}.... form
+     * Send a script to the server. The server will try to parse the script, and
+     * will include any parsing errors in a "human readable" message in the NO
+     * response.
      *
-     * @param raw String to convert
-     * @return converted String
+     * @param script String seive script to upload.
+     * @return OK if the script is added, NO on error
+     * @throws IOException
+     * @throws ParseException
      */
-    private String encodeString(final String raw) {
-
-        StringBuilder result = new StringBuilder();
-
-        result.append("{");
-        result.append(Integer.toString(raw.length()));
-        result.append("}");
-        result.append(CRLF);
-        result.append(raw);
-
-        return result.toString();
+    public SieveResponse putscript(final SieveScript script) throws IOException, ParseException {
+        String encodedName = encodeString(script.getName());
+        String encodedBody = encodeString(script.getBody());
+        sendCommand("PUTSCRIPT", encodedName, encodedBody);
+        return parseResponse();
     }
-
-    private void sendCommand(final String command, String... param) {
-        StringBuilder line = new StringBuilder();
-        line.append(command);
-        if (param != null) {
-            for (int i = 0; i < param.length; i++) {
-                line.append(SP);
-                line.append(param[i]);
-            }
+    
+    /**
+     * Get a script from the server. The name of the script is taken from the script param, and
+     * the body is stored in the object
+     * @param script SieveScript to fetch/update
+     * @return OK or NO response.
+     */
+    public SieveResponse getScript(SieveScript script) throws IOException, ParseException {
+        String encodedName = encodeString(script.getName());
+        sendCommand("GETSCRIPT", encodedName);
+        script.setBody(parseString());
+        int token = in.nextToken();
+        if (token != StreamTokenizer.TT_EOL) {
+            throw new ParseException("Expecting EOL but got " + tokenToString(token) + " at line " + in.lineno());
         }
-        sendLine(line.toString());
+        log.debug("Got scirpt, parsing response");
+        return parseResponse();
     }
-
-    private void sendLine(final String line) {
-        log.debug("Sending: " + line);
-        out.print(line);
-        out.print(CRLF);
-        out.flush();
+    
+    public SieveResponse deletescript(final SieveScript target) throws IOException, ParseException {
+        String encodedName = encodeString(target.getName());
+        sendCommand("DELETESCRIPT", encodedName);
+        return parseResponse();
     }
 
     private SieveResponse parseCapabilities() throws IOException, ParseException {
@@ -334,7 +328,6 @@ public class SieveServer {
 
         while (true) {
             int token = in.nextToken();
-            log.debug("Got token " + tokenToString(token));
             switch (token) {
                 case StreamTokenizer.TT_WORD:
                     // Unquoted word - end of capabilites
@@ -384,13 +377,11 @@ public class SieveServer {
                 default:
                     System.out.println("Generic char: " + Character.toChars(token)[0]);
                     break;
-
             }
         }
     }
 
     private SieveResponse parseResponse() throws IOException, ParseException {
-        log.debug("Parsing response");
         SieveResponse resp = new SieveResponse();
         int token = in.nextToken();
         if (token == StreamTokenizer.TT_WORD) {
@@ -409,15 +400,14 @@ public class SieveServer {
                 if (token != RIGHT_BRACKET) {
                     throw new ParseException("Expecting RIGHT_BRACKET got " + tokenToString(token) + " at line " + in.lineno());
                 }
+            } else {
+                in.pushBack();
             }
             // Check for human readable message
             token = in.nextToken();
             if (token != StreamTokenizer.TT_EOL) {
                 in.pushBack();
-
-                log.debug("Getting human maessge");
                 resp.setMessage(parseString());
-                log.debug("got human message");
                 token = in.nextToken();
             }
 
@@ -429,24 +419,19 @@ public class SieveServer {
         } else {
             throw new ParseException("Expecting WORD got " + tokenToString(token) + " at line " + in.lineno());
         }
-        log.debug("Done parsing repsonse");
         return resp;
     }
 
     private String parseString() throws IOException, ParseException {
-        log.debug("ParseString");
         int token = in.nextToken();
         if (token == DQUOTE) {
-            log.debug("Got quote, returning " + in.sval);
             return in.sval;
         } else if (token == '{') {
-            log.debug("Got {, parsing");
             token = in.nextToken();
             if (token != StreamTokenizer.TT_NUMBER) {
                 throw new ParseException("Expecting NUMBER got " + tokenToString(token) + " at line " + in.lineno());
             }
             int length = (int) in.nval;
-            StringBuilder result = new StringBuilder();
             token = in.nextToken();
             if (token != '}') {
                 throw new ParseException("Expecing } got " + tokenToString(token) + " at line " + in.lineno());
@@ -455,19 +440,81 @@ public class SieveServer {
             if (token != StreamTokenizer.TT_EOL) {
                 throw new ParseException("Expecting EOL got " + tokenToString(token) + " at line " + in.lineno());
             }
-            setTokenizerString();
-            for (int i = 0; i < length; i++) {
-                token = in.nextToken();
-                if (token == StreamTokenizer.TT_EOF) {
-                    throw new ParseException("Unexpected EOF reading string at line " + in.lineno());
-                }
-                result.append(Character.toChars(token)[0]);
-            }
-            setTokenizerNormal();
-            return result.toString();
+            byte[] rawString = new byte[length];
+            byteStream.read(rawString, 0, length);
+            String result =  new String(rawString, UTF8);
+            
+            log.debug("Read escaped string: " + result);
+            return result;
+
+//            setTokenizerString();
+//            for (int i = 0; i < length; i++) {
+//                token = in.nextToken();
+//                if (token == StreamTokenizer.TT_EOF) {
+//                    throw new ParseException("Unexpected EOF reading string at line " + in.lineno());
+//                }
+//                result.append(tokenToString(token));
+//            }
+//            setTokenizerNormal();
+            
         } else {
             throw new ParseException("Expecing DQUOTE or {, got " + tokenToString(token) + " at line " + in.lineno());
         }
+    }
+
+    private String escapeString(final String raw) {
+        StringBuilder result = new StringBuilder();
+        result.append(DQUOTE);
+        result.append(raw);
+        result.append(DQUOTE);
+        return result.toString();
+    }
+
+    /**
+     * Turn a string into a {'length'+}.... form
+     *
+     * @param raw String to convert
+     * @return converted String
+     */
+    private String encodeString(final String raw) {
+        StringBuilder result = new StringBuilder();
+
+        result.append("{");
+        result.append(Integer.toString(raw.getBytes(UTF8).length));
+        result.append("}");
+        result.append(CRLF);
+        result.append(raw);
+
+        return result.toString();
+    }
+
+    private void sendCommand(final String command, String... param) throws IOException {
+        StringBuilder line = new StringBuilder();
+        line.append(command);
+        if (param != null) {
+            for (int i = 0; i < param.length; i++) {
+                line.append(SP);
+                line.append(param[i]);
+            }
+        }
+        sendLine(line.toString());
+    }
+
+    private void sendLine(final String line) throws IOException {
+        out.print(line);
+        out.print(CRLF);
+        out.flush();
+
+        if (out.checkError()) {
+            throw new IOException("Unknown error writing to server");
+        }
+    }
+
+    private void setupAfterConnect(Socket sock) throws IOException {
+        byteStream = sock.getInputStream();
+        in = new StreamTokenizer(new InputStreamReader(byteStream));
+        setTokenizerNormal();
+        out = new PrintWriter(new OutputStreamWriter(sock.getOutputStream()));
     }
 
     private void setTokenizerNormal() {
@@ -480,10 +527,11 @@ public class SieveServer {
         in.wordChars(0x23, 0x27);
         in.wordChars(0x2A, 0x5B);
         in.wordChars(0x5D, 0x7A);
-        in.wordChars(0x7C, 0x7E);
+        in.wordChars(0x7C, 0x7C);
+        in.wordChars(0x7E, 0x7E);
 
         in.quoteChar(DQUOTE);
-
+        in.parseNumbers();
         in.eolIsSignificant(true);
     }
 
