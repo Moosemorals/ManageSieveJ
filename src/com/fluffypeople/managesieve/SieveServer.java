@@ -1,3 +1,26 @@
+/*
+ * The MIT License
+ *
+ * Copyright 2013 "Osric Wilkinson" <osric@fluffypeople.com>.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
 package com.fluffypeople.managesieve;
 
 import java.io.IOException;
@@ -9,19 +32,13 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
-import java.security.Provider;
-import java.security.Security;
 import java.security.cert.X509Certificate;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
-import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
-import javax.security.auth.callback.NameCallback;
-import javax.security.auth.callback.PasswordCallback;
-import javax.security.auth.callback.UnsupportedCallbackException;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
@@ -29,6 +46,7 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.log4j.Logger;
 
 /**
+ * Manage the connection with a Manage sieve server.
  *
  * @author "Osric Wilkinson" <osric@fluffypeople.com>
  */
@@ -46,14 +64,31 @@ public class SieveServer {
     private static final char SP = ' ';
     private StreamTokenizer in;
     private PrintWriter out;
+    
 
+    /**
+     *
+     */
     public SieveServer() {
     }
 
+    /**
+     * Get the current known server capabilties. Will return null if called
+     * before the server has been connected.
+     *
+     * @return
+     */
     public ServerCapabilities getCapabilities() {
         return cap;
     }
 
+    /**
+     * Connect to remote server
+     *
+     * @return SieveResponse OK on connect, NO on connection problems
+     * @throws IOException if there are underliying IO issues
+     * @throws ParseException if we can't parse the response from the server
+     */
     public SieveResponse connect() throws IOException, ParseException {
         socket = new Socket(InetAddress.getByName("localhost"), 4190);
 
@@ -61,7 +96,28 @@ public class SieveServer {
         return parseCapabilities();
     }
 
+    /**
+     * Upgrade connection to TLS. Should be called before authenticating,
+     * especialy if you are using the PLAIN scheme.
+     *
+     * @return SieveResponse OK on succesful upgrade, NO on error or if the
+     * server doesn't support SSL
+     * @throws IOException
+     * @throws ParseException
+     */
     public SieveResponse startTLS() throws IOException, ParseException {
+        if (!socket.isConnected()) {
+            SieveResponse response = new SieveResponse();
+            response.setType(SieveResponse.Type.NO);
+            response.setMessage("Can't upgrade to SSL: Socket not conencted");
+            return response;
+        } else if (cap == null || !cap.hasTLS()) {
+            SieveResponse response = new SieveResponse();
+            response.setType(SieveResponse.Type.NO);
+            response.setMessage("Can't upgrade to SSL: Server doesn't support SSL");
+            return response;
+        }
+
         try {
             // Create a trust manager that does not validate certificate chains
             final TrustManager[] trustAllCerts = new TrustManager[]{
@@ -104,29 +160,37 @@ public class SieveServer {
         }
     }
 
-    public SieveResponse authenticate(final String username, final String password) throws SaslException, IOException, ParseException {
-
-        CallbackHandler cbh = new CallbackHandler() {
-            @Override
-            public void handle(Callback[] clbcks) throws IOException, UnsupportedCallbackException {
-                for (Callback cb : clbcks) {
-                    if (cb instanceof NameCallback) {
-                        NameCallback name = (NameCallback) cb;
-                        name.setName(username);
-                    } else if (cb instanceof PasswordCallback) {
-                        PasswordCallback passwd = (PasswordCallback) cb;
-                        passwd.setPassword(password.toCharArray());
-                    }
-                }
-            }
-        };
-        Provider[] providers = Security.getProviders();
-
-        for (Provider p : providers) {
-            log.debug(p.getName());
-        }
-
-        String[] methods = cap.getSASLMethods();
+    /**
+     * Authenticate against the remote server using SASL.
+     *
+     * The CallbackHandler should be setup apropriatly, for example:
+     *
+     * <pre>
+     * {@code
+     * CallbackHandler cbh = new CallbackHandler() {
+     *
+     * @Override
+     *     public void handle(Callback[] clbcks) throws IOException,  UnsupportedCallbackException {
+     *         for (Callback cb : clbcks) {
+     *             if (cb instanceof NameCallback) {
+     *                 NameCallback name = (NameCallback) cb;
+     *                 name.setName("user");
+     *             } else if (cb instanceof PasswordCallback) {
+     *                 PasswordCallback passwd = (PasswordCallback) cb;
+     *                 passwd.setPassword("secret".toCharArray());
+     *             }
+     *         }
+     *     }
+     * }; 
+     * }
+     *</pre>
+     * @param cbh CallbackHandler[] list of calbacks that will be called by the SASL code
+     * @return SieveResponse from the server, OK is aithenticated, NO means a problem
+     * @throws SaslException 
+     * @throws IOException
+     * @throws ParseException
+     */
+    public SieveResponse authenticate(final CallbackHandler cbh) throws SaslException, IOException, ParseException {
 
         SaslClient sc = Sasl.createSaslClient(cap.getSASLMethods(), null, "sieve", "hathor.basement", null, cbh);
 
@@ -135,7 +199,7 @@ public class SieveServer {
         if (sc.hasInitialResponse()) {
             byte[] ir = sc.evaluateChallenge(new byte[0]);
             String ready = new String(Base64.encodeBase64(ir));
-            ready = escapeString(ready.trim());
+            ready = encodeString(ready.trim());
             log.debug("Inital response: " + ready);
             sendCommand("AUTHENTICATE", mechanism, ready);
         } else {
@@ -162,17 +226,58 @@ public class SieveServer {
             } else {
                 throw new ParseException("Expecting DQUOTE/WORD, got " + tokenToString(token) + " at line " + in.lineno());
             }
-        } while (!sc.isComplete()) ;
-        
+        } while (!sc.isComplete());
+
         // Complete
         sc.dispose();
-        
-        
         return resp;
     }
 
+    /**
+     * Load the list of current scripts from the server. Call getServerScripts() 
+     * to get the list returned.
+     * @return SieveResponse OK - list was fetched, NO - there was a problem.
+     * @throws IOException
+     * @throws ParseException
+     */
+    public SieveResponse listscripts() throws IOException, ParseException {
+        sendCommand("LISTSCRIPTS");
+        SieveResponse response;
+        while (true) {
+            int token = in.nextToken();
+            switch (token) {
+                case DQUOTE:
+                case LEFT_CURRLY_BRACE:
+                    in.pushBack();
+                    String scriptName = parseString();
+                    boolean isActive = false;
+                    token = in.nextToken();
+                    if (token == StreamTokenizer.TT_WORD) {
+                        if (in.sval.equals("ACTIVE")) {
+                            // active script;
+                            isActive = true;
+                        } else {
+                            throw new ParseException("Unexpected word " + in.sval + " at line " + in.lineno());
+                        }
+                        token = in.nextToken();
+                    }
+
+                    if (token != StreamTokenizer.TT_EOL) {
+                        throw new ParseException("Expected EOL, got  " + tokenToString(token) + " at line " + in.lineno());
+                    }
+                    log.debug("Script " + scriptName + (isActive ? " is active" : " is not active"));
+                    break;
+                case StreamTokenizer.TT_WORD:
+                    in.pushBack();
+                    return parseResponse();
+                default:
+                    throw new ParseException("Unexpected token " + tokenToString(token) + " at line " + in.lineno());
+            }
+        }
+    }
+
     private void setupAfterConnect(Socket sock) throws IOException {
-        in = new StreamTokenizer(new InputStreamReader(sock.getInputStream()));
+        in = new StreamTokenizer(new NoisyReader(new InputStreamReader(sock.getInputStream())));
         setTokenizerNormal();
         out = new PrintWriter(new OutputStreamWriter(sock.getOutputStream()));
     }

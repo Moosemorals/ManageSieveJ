@@ -24,25 +24,24 @@
 package com.fluffypeople.managesieve;
 
 /**
- *
+ * Model a sieve script, that has either been created localy, or
+ * resides on a remote server.
  * @author "Osric Wilkinson" <osric@fluffypeople.com>
  */
-public class ParseException extends Exception {
-
-    /**
-     * Creates a new instance of
-     * <code>ParseException</code> without detail message.
-     */
-    public ParseException() {
+public class SieveScript {
+    
+    protected String name;
+    protected String body;
+    protected boolean active;
+    
+    public SieveScript() {}
+    
+    public SieveScript(String name, String body, boolean active) {
+        this.name = name;
+        this.body = body;
+        this.active = active;
     }
-
-    /**
-     * Constructs an instance of
-     * <code>ParseException</code> with the specified detail message.
-     *
-     * @param msg the detail message.
-     */
-    public ParseException(String msg) {
-        super(msg);
-    }
+    
+    
+    
 }

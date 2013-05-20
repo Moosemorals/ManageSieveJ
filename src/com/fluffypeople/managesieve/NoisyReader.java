@@ -23,26 +23,42 @@
  */
 package com.fluffypeople.managesieve;
 
+import java.io.IOException;
+import java.io.Reader;
+import org.apache.log4j.Logger;
+
 /**
  *
  * @author "Osric Wilkinson" <osric@fluffypeople.com>
  */
-public class ParseException extends Exception {
+public class NoisyReader extends Reader {
+    
+    private static final Logger log = Logger.getLogger(NoisyReader.class);
+    
+    private final Reader base;
+    
+    public NoisyReader(final Reader base) {
+        this.base = base;
+    }
+    
+    StringBuilder buffer = new StringBuilder();
 
-    /**
-     * Creates a new instance of
-     * <code>ParseException</code> without detail message.
-     */
-    public ParseException() {
+    @Override
+    public int read(char[] chars, int offset, int length) throws IOException {
+        int result =  base.read(chars, offset, length);
+        buffer.append(chars, offset, length);
+        if (buffer.indexOf("\n") > -1) {
+            int end = buffer.indexOf("\n");
+            log.debug("Read line: " + buffer.substring(0, end));
+            buffer.delete(0, end + 1);
+        }
+        
+        return result;
     }
 
-    /**
-     * Constructs an instance of
-     * <code>ParseException</code> with the specified detail message.
-     *
-     * @param msg the detail message.
-     */
-    public ParseException(String msg) {
-        super(msg);
+    @Override
+    public void close() throws IOException {
+        base.close();
     }
+    
 }
