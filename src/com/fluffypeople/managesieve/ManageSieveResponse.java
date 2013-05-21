@@ -23,17 +23,32 @@
  */
 package com.fluffypeople.managesieve;
 
+import java.util.Arrays;
+import org.apache.log4j.Logger;
+
 /**
+ * Store the response from the Manage Sieve server. <p> Generally this will be
+ * either OK (indicating success), NO (indicating failure) or BYE (indicating
+ * the server is closing the connection). Some responses include a {@link #Code}
+ * giving more detail (which may have a {@link #subCode()}.
  *
  * @author "Osric Wilkinson" <osric@fluffypeople.com>
  */
-public class SieveResponse {
+public class ManageSieveResponse {
 
+    private static final Logger log = Logger.getLogger(ManageSieveResponse.class);
+
+    /**
+     * Type of the response.
+     */
     public enum Type {
 
         OK, NO, BYE
     };
 
+    /**
+     * Primary response code.
+     */
     public enum Code {
 
         AUTH_TOO_WEAK(false),
@@ -47,6 +62,7 @@ public class SieveResponse {
         ALREADYEXITS(false),
         WARNINGS(false),
         TAG(true),
+        QUOTA(false),
         extension(false);
         private final boolean hasParam;
 
@@ -57,41 +73,61 @@ public class SieveResponse {
         public boolean hasParam() {
             return hasParam;
         }
+
+        public static Code fromString(final String raw) {
+            log.debug("Constructing code from string: " + raw);
+            String tweaked = raw.replaceAll("-", "_");
+            log.debug("Tweaked version is " + tweaked);
+            try {
+                return Code.valueOf(tweaked.toUpperCase());
+            } catch (IllegalArgumentException ex) {
+                return Code.extension;
+            }
+        }
     }
     private Type type;
     private Code code;
+    private String[] subCodes;
     private String message;
     private String param;
 
-    public SieveResponse() {
+    /**
+     * Package only constructor. Users are not expected to make instances of
+     * this class.
+     */
+    ManageSieveResponse() {
     }
 
     /**
-     * Shorthand for (this.getType() == SieveResponse.Type.OK)
+     * Is this an OK response. Shorthand for (this.getType() ==
+     * SieveResponse.Type.OK)
+     *
      * @return true if is an OK response, false otherwise
      */
     public boolean isOk() {
         return type == Type.OK;
     }
+
     /**
-     * Shorthand for (this.getType() == SieveResponse.Type.NO)
+     * Is this a NO response. Shorthand for (this.getType() ==
+     * SieveResponse.Type.NO)
+     *
      * @return true if is an OK response, false otherwise
      */
-    
     public boolean isNo() {
         return type == Type.NO;
     }
-    
-        /**
-     * Shorthand for (this.getType() == SieveResponse.Type.BYE)
+
+    /**
+     * Is this a BYE response. Shorthand for (this.getType() ==
+     * SieveResponse.Type.BYE)
+     *
      * @return true if is an OK response, false otherwise
      */
-
     public boolean isBye() {
         return type == Type.BYE;
     }
-    
-    
+
     public Type getType() {
         return type;
     }
@@ -100,11 +136,31 @@ public class SieveResponse {
         return code;
     }
 
+    /**
+     * Get the list of any sub-codes that makeup this response. May be null. If
+     * this is not null the first element will be the string represnetation of
+     * {@link #getCode()}.
+     *
+     * @return
+     */
+    public String[] getSubCodes() {
+        return Arrays.copyOf(subCodes, subCodes.length);
+    }
+
+    /**
+     * Return any "Human readable" message from the response.
+     */
     public String getMessage() {
         return message;
     }
 
-    public void setType(final String type) throws ParseException {
+    /**
+     * Parse a string to set the type of this response.
+     *
+     * @param type String potential type, should be one of "OK", "NO", "BYE".
+     * @throws ParseException if the response type is not recognised.
+     */
+    void setType(final String type) throws ParseException {
         try {
             this.type = Type.valueOf(type.toUpperCase());
         } catch (IllegalArgumentException ex) {
@@ -112,35 +168,39 @@ public class SieveResponse {
         }
     }
 
-    public void setType(Type type) {
-        this.type = type;
+    /**
+     * Parse a string to set the code of this response. Sets both {@link #code}
+     * and {@link #subCodes}.
+     *
+     * @param raw
+     */
+    void setCode(final String raw) {
+        log.debug("Raw code: " + raw);
+        subCodes = raw.split("/");
+        this.code = Code.fromString(subCodes[0]);
     }
 
-    public void setCode(final String raw) throws ParseException {
-        String tweaked = raw.replaceAll("-", "_");
-        try {
-            this.code = Code.valueOf(tweaked.toUpperCase());
-        } catch (IllegalArgumentException ex) {
-            this.code = Code.extension;
-        }
-    }
-    
-    public void setCode(Code code) {
-        this.code = code;
-    }
-
-    public void setParam(final String param) {
+    /**
+     * Set any parameters associated with the code
+     *
+     * @param param String to use
+     */
+    void setParam(final String param) {
         this.param = param;
     }
-    
+
     public String getParam() {
         return param;
     }
-    
-    public void setMessage(String message) {
+
+    /**
+     * Set the "Human readable" message. This message SHOULD be shown to the
+     * user.
+     */
+    void setMessage(String message) {
         this.message = message;
     }
-    
+
     @Override
     public String toString() {
         StringBuilder result = new StringBuilder();
@@ -151,8 +211,7 @@ public class SieveResponse {
         if (message != null) {
             result.append(" \"").append(message).append("\"");
         }
-        
+
         return result.toString();
     }
-        
 }
