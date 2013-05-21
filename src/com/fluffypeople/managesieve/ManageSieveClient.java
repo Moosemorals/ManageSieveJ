@@ -120,18 +120,6 @@ public class ManageSieveClient {
      * @throws ParseException
      */
     public ManageSieveResponse startTLS() throws IOException, ParseException {
-        if (!socket.isConnected()) {
-            ManageSieveResponse response = new ManageSieveResponse();
-            response.setType(ManageSieveResponse.Type.NO);
-            response.setMessage("Can't upgrade to SSL: Socket not conencted");
-            return response;
-        } else if (cap == null || !cap.hasTLS()) {
-            ManageSieveResponse response = new ManageSieveResponse();
-            response.setType(ManageSieveResponse.Type.NO);
-            response.setMessage("Can't upgrade to SSL: Server doesn't support SSL");
-            return response;
-        }
-
         try {
             // Create a trust manager that does not validate certificate chains
             final TrustManager[] trustAllCerts = new TrustManager[]{
