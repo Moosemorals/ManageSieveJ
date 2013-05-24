@@ -32,16 +32,12 @@ import java.io.StreamTokenizer;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.nio.charset.Charset;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.X509Certificate;
+import java.security.Principal;
 import java.util.List;
-import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 import javax.security.auth.callback.CallbackHandler;
+import javax.security.auth.x500.X500Principal;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
@@ -49,32 +45,28 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.log4j.Logger;
 
 /**
- * A client for the Manage Sieve protocol. 
- * Manage sieve (<a href="http://tools.ietf.org/html/rfc5804">rfc5804</a>)
- * is used to manage the sieve mail filtering scripts on a server. (Sieve is defined
- * in <a href="http://tools.ietf.org/html/rfc5228">rfc5228>/a>).
- * <p>
- * This class manages the client side of the connection. The basic pattern is 
- * connect, upgrade to TLS, authenticate, issue commands, logout, close connection.
- * <p>
+ * A client for the Manage Sieve protocol. Manage sieve (<a
+ * href="http://tools.ietf.org/html/rfc5804">rfc5804</a>) is used to manage the
+ * sieve mail filtering scripts on a server. (Sieve is defined in <a
+ * href="http://tools.ietf.org/html/rfc5228">rfc5228>/a>). <p> This class
+ * manages the client side of the connection. The basic pattern is connect,
+ * upgrade to TLS, authenticate, issue commands, logout, close connection. <p>
  * Most commands take string arguments and return {@link SieveResponse} objects.
- * {@link #putscript} takes an {@link SieveScript} as an argument and stores
- * the result in that object.
- * 
+ * {@link #putscript} takes an {@link SieveScript} as an argument and stores the
+ * result in that object.
+ *
  * @author "Osric Wilkinson" <osric@fluffypeople.com>
  */
 public class ManageSieveClient {
 
     private static final Logger log = Logger.getLogger(ManageSieveClient.class);
     private static final Charset UTF8 = Charset.forName("UTF-8");
-    
     private static final char DQUOTE = '"';
     private static final char LEFT_CURRLY_BRACE = '{';
     private static final char LEFT_BRACKET = '(';
     private static final char RIGHT_BRACKET = ')';
     private static final String CRLF = "\r\n";
     private static final char SP = ' ';
-
     private Socket socket = null;
     private SSLSocket secureSocket = null;
     private ServerCapabilities cap;
@@ -123,46 +115,41 @@ public class ManageSieveClient {
      * @throws IOException
      * @throws ParseException
      */
-    public synchronized ManageSieveResponse startTLS() throws IOException, ParseException {
-        try {
-            // Create a trust manager that does not validate certificate chains
-            final TrustManager[] trustAllCerts = new TrustManager[]{
-                new X509TrustManager() {
-                    @Override
-                    public void checkClientTrusted(final X509Certificate[] chain, final String authType) {
-                    }
+    public synchronized ManageSieveResponse starttls() throws IOException, ParseException {
+        return starttls((SSLSocketFactory)SSLSocketFactory.getDefault());
+    }
 
-                    @Override
-                    public void checkServerTrusted(final X509Certificate[] chain, final String authType) {
-                    }
-
-                    @Override
-                    public X509Certificate[] getAcceptedIssuers() {
-                        return null;
-                    }
-                }
-            };
-
-            // Install the all-trusting trust manager
-            final SSLContext sslContext = SSLContext.getInstance("SSL");
-            sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
-            // Create an ssl socket factory with our all-trusting manager
-            final SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
-
-            sendCommand("STARTTLS");
-            ManageSieveResponse resp = parseResponse();
-            if (resp.isOk()) {
-                secureSocket = (SSLSocket) sslSocketFactory.createSocket(socket, socket.getInetAddress().getHostAddress(), socket.getPort(), true);
-                setupAfterConnect(secureSocket);
-                return parseCapabilities();
-
+    /**
+     * Upgrade connection to TLS. Should be called before authenticating,
+     * especialy if you are using the PLAIN scheme.
+     * 
+     * @param sslSocketFactory
+     * @return SieveResponse OK on succesful upgrade, NO on error or if the
+     * server doesn't support SSL
+     * @throws IOException
+     * @throws ParseException
+     */
+    public synchronized ManageSieveResponse starttls(final SSLSocketFactory sslSocketFactory) throws IOException, ParseException {
+        sendCommand("STARTTLS");
+        ManageSieveResponse resp = parseResponse();
+        if (resp.isOk()) {
+            secureSocket = (SSLSocket) sslSocketFactory.createSocket(socket, socket.getInetAddress().getHostAddress(), socket.getPort(), true);
+            
+            Principal p = secureSocket.getSession().getPeerPrincipal();
+            if (p instanceof X500Principal) {
+               String serverName = getHostnameFromCert((X500Principal)p);
+               if (!hostname.equals(serverName)) {
+                   throw new IOException("Secure connect failed: Server name " + serverName + " doesn't match wanted " + hostname);
+               }
             } else {
-                return resp;
+                log.warn("Unexpected principle type: " + p.getName());
             }
-        } catch (KeyManagementException ex) {
-            throw new IOException("Could not seutp SSL socket", ex);
-        } catch (NoSuchAlgorithmException ex) {
-            throw new IOException("Could not setup SSL socket", ex);
+            
+            setupAfterConnect(secureSocket);
+            return parseCapabilities();
+
+        } else {
+            return resp;
         }
     }
 
@@ -354,10 +341,11 @@ public class ManageSieveClient {
 
     /**
      * "This command is used to delete a user's Sieve script".
+     *
      * @param name String name of the script to delete
      * @return OK if the script was deleted, NO otherwise
      * @throws IOException
-     * @throws ParseException 
+     * @throws ParseException
      */
     public synchronized ManageSieveResponse deletescript(final String name) throws IOException, ParseException {
         String encodedName = encodeString(name);
@@ -366,16 +354,15 @@ public class ManageSieveClient {
     }
 
     /**
-     * "This command sets a script active". The active script is the one
-     * used by the MDA to filter incomming mail. It is not an error to have no
-     * scripts active, or to set the same script active twice.
-     * <p>
-     * Use the empty string ("") to set no scripts active.
-     * 
+     * "This command sets a script active". The active script is the one used by
+     * the MDA to filter incomming mail. It is not an error to have no scripts
+     * active, or to set the same script active twice. <p> Use the empty string
+     * ("") to set no scripts active.
+     *
      * @param name String name of the script to set active
      * @return
      * @throws IOException
-     * @throws ParseException 
+     * @throws ParseException
      */
     public synchronized ManageSieveResponse setactive(final String name) throws IOException, ParseException {
         String encodedName = encodeString(name);
@@ -641,5 +628,18 @@ public class ManageSieveClient {
                     return "UNKNOWN";
             }
         }
+    }
+
+    private String getHostnameFromCert(X500Principal principal) {
+        String raw = principal.getName("CANONICAL");
+        for (String phrase : raw.split(",")) {
+            String[] parts = phrase.split("=");
+            String key = parts[0];
+            String value = parts[1];
+            if (key.equals("cn")) {
+                return value;
+            }
+        }
+        return null;
     }
 }
