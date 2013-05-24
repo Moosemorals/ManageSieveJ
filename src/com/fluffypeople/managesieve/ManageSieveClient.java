@@ -106,7 +106,7 @@ public class ManageSieveClient {
      * @throws IOException if there are underlying IO issues
      * @throws ParseException if we can't parse the response from the server
      */
-    public ManageSieveResponse connect(final String host, final int port) throws IOException, ParseException {
+    public synchronized ManageSieveResponse connect(final String host, final int port) throws IOException, ParseException {
         hostname = host;
         socket = new Socket(InetAddress.getByName(hostname), port);
 
@@ -123,7 +123,7 @@ public class ManageSieveClient {
      * @throws IOException
      * @throws ParseException
      */
-    public ManageSieveResponse startTLS() throws IOException, ParseException {
+    public synchronized ManageSieveResponse startTLS() throws IOException, ParseException {
         try {
             // Create a trust manager that does not validate certificate chains
             final TrustManager[] trustAllCerts = new TrustManager[]{
@@ -197,7 +197,7 @@ public class ManageSieveClient {
      * @throws IOException
      * @throws ParseException
      */
-    public ManageSieveResponse authenticate(final CallbackHandler cbh) throws SaslException, IOException, ParseException {
+    public synchronized ManageSieveResponse authenticate(final CallbackHandler cbh) throws SaslException, IOException, ParseException {
 
         SaslClient sc = Sasl.createSaslClient(cap.getSASLMethods(), null, "sieve", hostname, null, cbh);
 
@@ -247,7 +247,7 @@ public class ManageSieveClient {
      * @throws IOException
      * @throws ParseException
      */
-    public ManageSieveResponse listscripts(List<SieveScript> scripts) throws IOException, ParseException {
+    public synchronized ManageSieveResponse listscripts(List<SieveScript> scripts) throws IOException, ParseException {
         if (!scripts.isEmpty()) {
             scripts.clear();
         }
@@ -301,7 +301,7 @@ public class ManageSieveClient {
      * @throws IOException
      * @throws ParseException
      */
-    public ManageSieveResponse havespace(final String name, final long size) throws IOException, ParseException {
+    public synchronized ManageSieveResponse havespace(final String name, final long size) throws IOException, ParseException {
         String escapedName = escapeString(name);
         String number = Long.toString(size, 10);
         sendCommand("HAVESPACE", escapedName, number);
@@ -325,7 +325,7 @@ public class ManageSieveClient {
      * @throws IOException
      * @throws ParseException
      */
-    public ManageSieveResponse putscript(final String name, final String body) throws IOException, ParseException {
+    public synchronized ManageSieveResponse putscript(final String name, final String body) throws IOException, ParseException {
         String encodedName = encodeString(name);
         String encodedBody = encodeString(body);
         sendCommand("PUTSCRIPT", encodedName, encodedBody);
@@ -340,7 +340,7 @@ public class ManageSieveClient {
      * @param script SieveScript to fetch/update
      * @return OK or NO response.
      */
-    public ManageSieveResponse getScript(final String name, String body) throws IOException, ParseException {
+    public synchronized ManageSieveResponse getScript(final String name, String body) throws IOException, ParseException {
         String encodedName = encodeString(name);
         sendCommand("GETSCRIPT", encodedName);
         body = parseString();
@@ -359,7 +359,7 @@ public class ManageSieveClient {
      * @throws IOException
      * @throws ParseException 
      */
-    public ManageSieveResponse deletescript(final String name) throws IOException, ParseException {
+    public synchronized ManageSieveResponse deletescript(final String name) throws IOException, ParseException {
         String encodedName = encodeString(name);
         sendCommand("DELETESCRIPT", encodedName);
         return parseResponse();
@@ -377,31 +377,31 @@ public class ManageSieveClient {
      * @throws IOException
      * @throws ParseException 
      */
-    public ManageSieveResponse setactive(final String name) throws IOException, ParseException {
+    public synchronized ManageSieveResponse setactive(final String name) throws IOException, ParseException {
         String encodedName = encodeString(name);
         sendCommand("SETACTIVE", encodedName);
         return parseResponse();
     }
 
-    public ManageSieveResponse logout() throws IOException, ParseException {
+    public synchronized ManageSieveResponse logout() throws IOException, ParseException {
         sendCommand("LOGOUT");
         return parseResponse();
     }
 
-    public ManageSieveResponse renamescript(final String oldName, final String newName) throws IOException, ParseException {
+    public synchronized ManageSieveResponse renamescript(final String oldName, final String newName) throws IOException, ParseException {
         String encodedOldName = encodeString(oldName);
         String encodedNewName = encodeString(newName);
         sendCommand("RENAMESCRIPT", encodedOldName, encodedNewName);
         return parseResponse();
     }
 
-    public ManageSieveResponse checkscript(final String script) throws IOException, ParseException {
+    public synchronized ManageSieveResponse checkscript(final String script) throws IOException, ParseException {
         String encodedScript = encodeString(script);
         sendCommand("CHECKSCRIPT", encodedScript);
         return parseResponse();
     }
 
-    public ManageSieveResponse noop(final String tag) throws IOException, ParseException {
+    public synchronized ManageSieveResponse noop(final String tag) throws IOException, ParseException {
         if (tag != null) {
             String encodedTag = encodeString(tag);
             sendCommand("NOOP", encodedTag);
@@ -411,7 +411,7 @@ public class ManageSieveClient {
         return parseResponse();
     }
 
-    public ManageSieveResponse capability() throws IOException, ParseException {
+    public synchronized ManageSieveResponse capability() throws IOException, ParseException {
         sendCommand("CAPABILITY");
         parseCapabilities();
         return parseResponse();
