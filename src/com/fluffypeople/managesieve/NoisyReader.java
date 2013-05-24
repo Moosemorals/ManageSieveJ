@@ -47,6 +47,7 @@ public class NoisyReader extends Reader {
     public int read(char[] chars, int offset, int length) throws IOException {
         int result =  base.read(chars, offset, length);
         buffer.append(chars, offset, length);
+        log.debug(buffer.toString());
         if (buffer.indexOf("\n") > -1) {
             int end = buffer.indexOf("\n");
             log.debug("Read line: " + buffer.substring(0, end));

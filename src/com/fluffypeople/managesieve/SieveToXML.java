@@ -48,6 +48,7 @@ public class SieveToXML {
     public XML convert(final Reader script) throws ParseException, IOException {
         XML xml = new XML();
         in = new StreamTokenizer(script);
+        setupTokenizer();
 
         xml.start("sieve", "xmlns", "urn:ietf:params:xml:ns:sieve");
         commands(xml);
@@ -264,6 +265,7 @@ public class SieveToXML {
         in.wordChars(0x5F, 0x5F); // _
 
         in.quoteChar(0x22); // "
+        in.commentChar('#');
 
         in.slashStarComments(true);
         in.eolIsSignificant(false);

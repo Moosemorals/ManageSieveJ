@@ -67,18 +67,21 @@ public class ManageSieveClient {
 
     private static final Logger log = Logger.getLogger(ManageSieveClient.class);
     private static final Charset UTF8 = Charset.forName("UTF-8");
-    private Socket socket = null;
-    private SSLSocket secureSocket = null;
-    private ServerCapabilities cap;
+    
     private static final char DQUOTE = '"';
     private static final char LEFT_CURRLY_BRACE = '{';
     private static final char LEFT_BRACKET = '(';
     private static final char RIGHT_BRACKET = ')';
     private static final String CRLF = "\r\n";
     private static final char SP = ' ';
+
+    private Socket socket = null;
+    private SSLSocket secureSocket = null;
+    private ServerCapabilities cap;
     private StreamTokenizer in;
     private InputStream byteStream;
     private PrintWriter out;
+    private String hostname;
 
     /**
      * Public constructor.
@@ -100,11 +103,12 @@ public class ManageSieveClient {
      * Connect to remote server
      *
      * @return SieveResponse OK on connect, NO on connection problems
-     * @throws IOException if there are underliying IO issues
+     * @throws IOException if there are underlying IO issues
      * @throws ParseException if we can't parse the response from the server
      */
-    public ManageSieveResponse connect() throws IOException, ParseException {
-        socket = new Socket(InetAddress.getByName("localhost"), 4190);
+    public ManageSieveResponse connect(final String host, final int port) throws IOException, ParseException {
+        hostname = host;
+        socket = new Socket(InetAddress.getByName(hostname), port);
 
         setupAfterConnect(socket);
         return parseCapabilities();
@@ -195,7 +199,7 @@ public class ManageSieveClient {
      */
     public ManageSieveResponse authenticate(final CallbackHandler cbh) throws SaslException, IOException, ParseException {
 
-        SaslClient sc = Sasl.createSaslClient(cap.getSASLMethods(), null, "sieve", "hathor.basement", null, cbh);
+        SaslClient sc = Sasl.createSaslClient(cap.getSASLMethods(), null, "sieve", hostname, null, cbh);
 
         String mechanism = escapeString(sc.getMechanismName());
         if (sc.hasInitialResponse()) {

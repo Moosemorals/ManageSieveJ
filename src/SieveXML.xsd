@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+Copyright (c) 2010 IETF Trust and the persons identified as authors of the code.  
+All rights reserved. 
+
+Redistribution and use in source and binary forms, with or without modification,
+ are permitted provided that the following conditions are met:
+
+·    Redistributions of source code must retain the above copyright notice, this
+ list of conditions and the following disclaimer.
+ 
+·    Redistributions in binary form must reproduce the above copyright notice, 
+this list of conditions and the following disclaimer
+ in the documentation and/or other materials provided with the distribution.
+ 
+·    Neither the name of Internet Society, IETF or IETF Trust, nor the names of 
+specific contributors, may be used to endorse or promote products derived from 
+this software without specific prior written permission.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” AND
+ ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE 
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, 
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+-->
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+               xmlns="urn:ietf:params:xml:ns:sieve"
+               targetNamespace="urn:ietf:params:xml:ns:sieve">
+
+    <xsd:element name="sieve">
+        <xsd:complexType>
+            <xsd:sequence>
+                <xsd:choice maxOccurs="unbounded" minOccurs="0">
+                    <xsd:element ref="control"/>
+                    <xsd:element ref="action"/>
+                    <xsd:element ref="displayblock"/>
+                    <xsd:element ref="displaydata"/>
+                    <xsd:element ref="comment"/>
+                    <xsd:any namespace="##other" processContents="lax"/>
+                </xsd:choice>
+            </xsd:sequence>
+        </xsd:complexType>
+    </xsd:element>
+
+    <xsd:element name="comment" type="xsd:string"/>
+
+    <xsd:complexType name="ambles">
+        <xsd:choice minOccurs="0" maxOccurs="unbounded">
+            <xsd:element ref="displaydata"/>
+            <xsd:element ref="comment"/>
+            <xsd:any namespace="##other" processContents="lax"/>
+        </xsd:choice>
+    </xsd:complexType>
+
+    <xsd:element name="preamble" type="ambles"/>
+    <xsd:element name="postamble" type="ambles"/>
+
+    <xsd:complexType name="command">
+        <xsd:sequence>
+            <xsd:element ref="preamble" minOccurs="0" maxOccurs="1"/>
+            <xsd:choice minOccurs="0" maxOccurs="unbounded">
+                <xsd:element ref="str"/>
+                <xsd:element ref="num"/>
+                <xsd:element ref="list"/>
+                <xsd:element ref="tag"/>
+            </xsd:choice>
+            <xsd:element ref="test" minOccurs="0" maxOccurs="1"/>
+            <xsd:choice minOccurs="0" maxOccurs="unbounded">
+                <xsd:element ref="control"/>
+                <xsd:element ref="action"/>
+                <xsd:element ref="displayblock"/>
+            </xsd:choice>
+            <xsd:element ref="postamble" minOccurs="0" maxOccurs="1"/>
+        </xsd:sequence>
+        <xsd:attribute use="required" name="name" type="identifier"/>
+    </xsd:complexType>
+
+    <xsd:element name="control" type="command"/>
+    <xsd:element name="action" type="command"/>
+
+    <xsd:element name="test">
+        <xsd:complexType>
+            <xsd:sequence>
+                <xsd:choice minOccurs="0" maxOccurs="unbounded">
+                    <xsd:element ref="str"/>
+                    <xsd:element ref="num"/>
+                    <xsd:element ref="list"/>
+                    <xsd:element ref="tag"/>
+                    <xsd:element ref="displaydata"/>
+                    <xsd:element ref="comment"/>
+                    <xsd:any namespace="##other" processContents="lax"/>
+                </xsd:choice>
+                <xsd:element ref="test" minOccurs="0"
+                        maxOccurs="unbounded"/>
+            </xsd:sequence>
+            <xsd:attribute use="required" name="name" type="identifier"/>
+        </xsd:complexType>
+    </xsd:element>
+
+    <xsd:element name="list">
+        <xsd:complexType>
+            <xsd:sequence>
+                <xsd:element ref="str" minOccurs="1"
+                        maxOccurs="unbounded"/>
+            </xsd:sequence>
+        </xsd:complexType>
+    </xsd:element>
+
+    <xsd:element name="tag" type="identifier"/>
+
+    <xsd:element name="str" type="xsd:string"/>
+
+    <xsd:element name="num" type="xsd:nonNegativeInteger"/>
+
+    <xsd:simpleType name="identifier">
+        <xsd:restriction base="xsd:token">
+            <xsd:pattern value="[A-Za-z_][A-Za-z0-9_]*"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+
+    <xsd:element name="displayblock">
+        <xsd:complexType>
+            <xsd:sequence>
+                <xsd:choice minOccurs="0" maxOccurs="unbounded">
+                    <xsd:element ref="control"/>
+                    <xsd:element ref="action"/>
+                    <xsd:element ref="displayblock"/>
+                    <xsd:element ref="displaydata"/>
+                    <xsd:element ref="comment"/>
+                    <xsd:any namespace="##other" processContents="lax"/>
+                </xsd:choice>
+            </xsd:sequence>
+            <xsd:anyAttribute processContents="skip"/>
+        </xsd:complexType>
+    </xsd:element>
+
+    <xsd:element name="displaydata">
+        <xsd:complexType>
+            <xsd:sequence minOccurs="0" maxOccurs="unbounded">
+                <xsd:any processContents="skip"/>
+            </xsd:sequence>
+        </xsd:complexType>
+    </xsd:element>
+
+</xsd:schema>
