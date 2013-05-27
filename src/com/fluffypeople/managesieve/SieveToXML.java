@@ -118,6 +118,10 @@ public class SieveToXML {
         } else if (token == '"') {
             string(xml);
             return true;
+        } else if (token == StreamTokenizer.TT_WORD && in.sval.equals("text")) {
+            in.pushBack();
+            string(xml);
+            return true;
         } else if (token == StreamTokenizer.TT_NUMBER) {
             number(xml);
             return true;
@@ -134,6 +138,70 @@ public class SieveToXML {
         int token = in.nextToken();
         if (token == '"') {
             xml.add("str", in.sval);
+        } else if (token == StreamTokenizer.TT_WORD) {
+            if (in.sval.equals("text")) {
+                token = in.nextToken();
+                if (token == ':') {
+                    // multi line string. Set tokenizer to ignore everything
+                    // but line endings and # comments. 
+                    in.resetSyntax();
+                    in.ordinaryChars(0, 255);
+                    in.commentChar('#');
+                    in.whitespaceChars('\r', '\r');
+                    in.whitespaceChars('\n', '\n');
+                    in.eolIsSignificant(true);
+
+                    // Read to end of line we're on
+                    token = in.nextToken();
+                    if (token != StreamTokenizer.TT_EOL) {
+                        raiseError("EOL", token, in.lineno());
+                    }
+
+                    // OK< start of multiline string. Comments are no longer
+                    // significant
+                    in.ordinaryChar('#');
+
+                    StringBuilder rawString = new StringBuilder();
+
+                    while (true) {
+                        StringBuilder line = new StringBuilder();
+                        do {
+                            token = in.nextToken();
+
+                            if (token == StreamTokenizer.TT_WORD) {
+                                // Unicode character
+                                line.append(in.sval);
+                            } else if (token == '\r' || token == '\n') {
+                                // skip it
+                            } else {
+                                try {
+                                    line.append(Character.toChars(token));
+                                } catch (java.lang.IllegalArgumentException ex) {
+                                    log.error(token + " is not a valid char ");
+                                    throw ex;
+                                }
+                            }
+                        } while (token != StreamTokenizer.TT_EOL);
+                        System.out.println("line: " + line.toString());
+
+                        if (line.length() == 1 && line.codePointAt(0) == '.') {
+                            // Found last line
+                            break;
+                        } else if (line.length() > 1 && line.codePointAt(0) == '.' && line.codePointAt(1) == '.') {
+                            // Dot has been doubled, so delete the extra
+                            line.deleteCharAt(0);
+                        }
+                        rawString.append(line).append("\r\n");
+                    }
+
+                    xml.add("str", rawString.toString());
+                    setupTokenizer();
+                } else {
+                    raiseError(":", token, in.lineno());
+                }
+            } else {
+                raiseError("'text'", token, in.lineno());
+            }
         } else {
             raiseError("\"", token, in.lineno());
         }
