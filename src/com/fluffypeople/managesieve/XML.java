@@ -14,8 +14,7 @@ import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.log4j.Logger;
 import org.w3c.dom.*;
 
 /**
@@ -26,7 +25,7 @@ import org.w3c.dom.*;
  */
 public class XML {
 
-    private static final Logger log = LoggerFactory.getLogger(XML.class);
+    private static final Logger log = Logger.getLogger(XML.class);
     private Node current;
     private Document root;
     
@@ -52,7 +51,7 @@ public class XML {
 
             return doc;
         } catch (ParserConfigurationException ex) {
-            log.error("Can't create new Document: {}", ex.getMessage());
+            log.error("Can't create new Document:" + ex.getMessage());
             return null;
         }
     }
@@ -76,7 +75,7 @@ public class XML {
     public XML start(final String tag, final String... attributes) {
         Element e = root.createElement(tag);
 
-        if (attributes != null) {
+        if (attributes != null && attributes.length > 1) {
             if (attributes.length % 2 != 0) {
                 throw new IllegalArgumentException("Attribute list must be even length, got " + attributes.length);
             }

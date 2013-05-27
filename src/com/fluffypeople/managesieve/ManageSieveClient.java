@@ -23,8 +23,8 @@
  */
 package com.fluffypeople.managesieve;
 
+import java.io.BufferedInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
@@ -42,8 +42,7 @@ import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
 import org.apache.commons.codec.binary.Base64;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.log4j.Logger;
 
 /**
  * A client for the Manage Sieve protocol. Manage sieve (<a
@@ -60,7 +59,7 @@ import org.slf4j.LoggerFactory;
  */
 public class ManageSieveClient {
 
-    private static final Logger log = LoggerFactory.getLogger(ManageSieveClient.class);
+    private static final Logger log = Logger.getLogger(ManageSieveClient.class);
     private static final Charset UTF8 = Charset.forName("UTF-8");
     private static final char DQUOTE = '"';
     private static final char LEFT_CURRLY_BRACE = '{';
@@ -72,7 +71,7 @@ public class ManageSieveClient {
     private SSLSocket secureSocket = null;
     private ServerCapabilities cap;
     private StreamTokenizer in;
-    private InputStream byteStream;
+    private BufferedInputStream byteStream;
     private PrintWriter out;
     private String hostname;
 
@@ -117,13 +116,13 @@ public class ManageSieveClient {
      * @throws ParseException
      */
     public synchronized ManageSieveResponse starttls() throws IOException, ParseException {
-        return starttls((SSLSocketFactory)SSLSocketFactory.getDefault(), true);
+        return starttls((SSLSocketFactory) SSLSocketFactory.getDefault(), true);
     }
 
     /**
      * Upgrade connection to TLS. Should be called before authenticating,
      * especially if you are using the PLAIN scheme.
-     * 
+     *
      * @param sslSocketFactory
      * @return SieveResponse OK on successful upgrade, NO on error or if the
      * server doesn't support SSL
@@ -138,19 +137,20 @@ public class ManageSieveClient {
             if (rfcCheck) {
                 // The manage sieve rfc says we should check that the name in the certificate
                 // matches the hostname that we want. 
-                
+
                 Principal p = secureSocket.getSession().getPeerPrincipal();
                 if (p instanceof X500Principal) {
-                   String serverName = getHostnameFromCert((X500Principal)p);
-                   if (!hostname.equals(serverName)) {
-                       throw new IOException("Secure connect failed: Server name " + serverName + " doesn't match wanted " + hostname);
-                   }
+                    String serverName = getHostnameFromCert((X500Principal) p);
+                    if (!hostname.equals(serverName)) {
+                        throw new IOException("Secure connect failed: Server name " + serverName + " doesn't match wanted " + hostname);
+                    }
                 } else {
-                    log.warn("Unexpected principle type '{}', assuming correct.", p.getClass().getName());
+                    log.warn("Unexpected principle type: " + p.getName());
                 }
             }
             setupAfterConnect(secureSocket);
             return parseCapabilities();
+
         } else {
             return resp;
         }
@@ -330,10 +330,10 @@ public class ManageSieveClient {
      * @param script SieveScript to fetch/update
      * @return OK or NO response.
      */
-    public synchronized ManageSieveResponse getScript(final String name, String body) throws IOException, ParseException {
-        String encodedName = encodeString(name);
+    public synchronized ManageSieveResponse getScript(SieveScript script) throws IOException, ParseException {
+        String encodedName = encodeString(script.getName());
         sendCommand("GETSCRIPT", encodedName);
-        body = parseString();
+        script.setBody(parseString());
         int token = in.nextToken();
         if (token != StreamTokenizer.TT_EOL) {
             throw new ParseException("Expecting EOL but got " + tokenToString(token) + " at line " + in.lineno());
@@ -357,7 +357,7 @@ public class ManageSieveClient {
 
     /**
      * "This command sets a script active". The active script is the one used by
-     * the MDA to filter incomming mail. It is not an error to have no scripts
+     * the MDA to filter incoming mail. It is not an error to have no scripts
      * active, or to set the same script active twice. <p> Use the empty string
      * ("") to set no scripts active.
      *
@@ -529,11 +529,31 @@ public class ManageSieveClient {
                 throw new ParseException("Expecting EOL got " + tokenToString(token) + " at line " + in.lineno());
             }
             // Drop out of the tokenizer to read the raw bytes...
-            byte[] rawString = new byte[length];
-            byteStream.read(rawString, 0, length);
-            //.. and convert them to a UTF encoded string.
-            String result = new String(rawString, UTF8);
-            return result;
+            
+            StringBuilder rawString = new StringBuilder();
+            log.debug("Raw string: reading " + length + " bytes");
+            
+            in.resetSyntax();
+            int count = 0;
+            while (count < length) {
+                token = in.nextToken();
+                if (token == StreamTokenizer.TT_WORD) {
+                    // Tokenizer calls unicode "WORD" even in raw(ish) mode
+                    rawString.append(in.sval);
+                    count += in.sval.getBytes(UTF8).length;
+                } else {
+                    // Probably only ever one byte chars, however lets be
+                    // careful out there.
+                    char[] chars = Character.toChars(token);
+                    rawString.append(chars);
+                    count += chars.length;
+                }
+            }
+            
+            // Remember to reset the tokenizer now we're done
+            setupTokenizer();
+            
+            return rawString.toString();
         } else {
             throw new ParseException("Expecing DQUOTE or {, got " + tokenToString(token) + " at line " + in.lineno());
         }
@@ -578,6 +598,7 @@ public class ManageSieveClient {
     }
 
     private void sendLine(final String line) throws IOException {
+        log.debug("Sending line: " + line);
         out.print(line);
         out.print(CRLF);
         out.flush();
@@ -588,7 +609,8 @@ public class ManageSieveClient {
     }
 
     private void setupAfterConnect(Socket sock) throws IOException {
-        byteStream = sock.getInputStream();
+        sock.setSoTimeout(5000);
+        byteStream = new BufferedInputStream(sock.getInputStream());
         in = new StreamTokenizer(new InputStreamReader(byteStream));
         setupTokenizer();
         out = new PrintWriter(new OutputStreamWriter(sock.getOutputStream()));
