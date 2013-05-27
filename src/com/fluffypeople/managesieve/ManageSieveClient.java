@@ -110,41 +110,44 @@ public class ManageSieveClient {
      * Upgrade connection to TLS. Should be called before authenticating,
      * especialy if you are using the PLAIN scheme.
      *
-     * @return SieveResponse OK on succesful upgrade, NO on error or if the
+     * @return SieveResponse OK on successful upgrade, NO on error or if the
      * server doesn't support SSL
      * @throws IOException
      * @throws ParseException
      */
     public synchronized ManageSieveResponse starttls() throws IOException, ParseException {
-        return starttls((SSLSocketFactory)SSLSocketFactory.getDefault());
+        return starttls((SSLSocketFactory)SSLSocketFactory.getDefault(), true);
     }
 
     /**
      * Upgrade connection to TLS. Should be called before authenticating,
-     * especialy if you are using the PLAIN scheme.
+     * especially if you are using the PLAIN scheme.
      * 
      * @param sslSocketFactory
-     * @return SieveResponse OK on succesful upgrade, NO on error or if the
+     * @return SieveResponse OK on successful upgrade, NO on error or if the
      * server doesn't support SSL
      * @throws IOException
      * @throws ParseException
      */
-    public synchronized ManageSieveResponse starttls(final SSLSocketFactory sslSocketFactory) throws IOException, ParseException {
+    public synchronized ManageSieveResponse starttls(final SSLSocketFactory sslSocketFactory, final boolean rfcCheck) throws IOException, ParseException {
         sendCommand("STARTTLS");
         ManageSieveResponse resp = parseResponse();
         if (resp.isOk()) {
             secureSocket = (SSLSocket) sslSocketFactory.createSocket(socket, socket.getInetAddress().getHostAddress(), socket.getPort(), true);
-            
-            Principal p = secureSocket.getSession().getPeerPrincipal();
-            if (p instanceof X500Principal) {
-               String serverName = getHostnameFromCert((X500Principal)p);
-               if (!hostname.equals(serverName)) {
-                   throw new IOException("Secure connect failed: Server name " + serverName + " doesn't match wanted " + hostname);
-               }
-            } else {
-                log.warn("Unexpected principle type: " + p.getName());
+            if (rfcCheck) {
+                // The manage sieve rfc says we should check that the name in the certificate
+                // matches the hostname that we want. 
+                
+                Principal p = secureSocket.getSession().getPeerPrincipal();
+                if (p instanceof X500Principal) {
+                   String serverName = getHostnameFromCert((X500Principal)p);
+                   if (!hostname.equals(serverName)) {
+                       throw new IOException("Secure connect failed: Server name " + serverName + " doesn't match wanted " + hostname);
+                   }
+                } else {
+                    log.warn("Unexpected principle type: " + p.getName());
+                }
             }
-            
             setupAfterConnect(secureSocket);
             return parseCapabilities();
 
