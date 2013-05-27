@@ -23,7 +23,6 @@
  */
 package com.fluffypeople.managesieve;
 
-import com.fluffypeople.xml.XML;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.StreamTokenizer;
@@ -194,7 +193,7 @@ public class SieveToXML {
                 in.pushBack();
             }
 
-            xml.add("num", raw);
+            xml.add("num", Long.toString(raw, 10));
         } else {
             raiseError("NUM", token, in.lineno());
         }
