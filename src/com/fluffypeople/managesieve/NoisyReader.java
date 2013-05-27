@@ -25,7 +25,8 @@ package com.fluffypeople.managesieve;
 
 import java.io.IOException;
 import java.io.Reader;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -33,7 +34,7 @@ import org.apache.log4j.Logger;
  */
 public class NoisyReader extends Reader {
     
-    private static final Logger log = Logger.getLogger(NoisyReader.class);
+    private static final Logger log = LoggerFactory.getLogger(NoisyReader.class);
     
     private final Reader base;
     
@@ -47,10 +48,9 @@ public class NoisyReader extends Reader {
     public int read(char[] chars, int offset, int length) throws IOException {
         int result =  base.read(chars, offset, length);
         buffer.append(chars, offset, length);
-        log.debug(buffer.toString());
         if (buffer.indexOf("\n") > -1) {
             int end = buffer.indexOf("\n");
-            log.debug("Read line: " + buffer.substring(0, end));
+            log.debug("Read line: {} ", buffer.substring(0, end));
             buffer.delete(0, end + 1);
         }
         

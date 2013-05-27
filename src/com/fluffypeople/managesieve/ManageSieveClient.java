@@ -42,7 +42,8 @@ import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
 import org.apache.commons.codec.binary.Base64;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A client for the Manage Sieve protocol. Manage sieve (<a
@@ -59,7 +60,7 @@ import org.apache.log4j.Logger;
  */
 public class ManageSieveClient {
 
-    private static final Logger log = Logger.getLogger(ManageSieveClient.class);
+    private static final Logger log = LoggerFactory.getLogger(ManageSieveClient.class);
     private static final Charset UTF8 = Charset.forName("UTF-8");
     private static final char DQUOTE = '"';
     private static final char LEFT_CURRLY_BRACE = '{';
@@ -145,12 +146,11 @@ public class ManageSieveClient {
                        throw new IOException("Secure connect failed: Server name " + serverName + " doesn't match wanted " + hostname);
                    }
                 } else {
-                    log.warn("Unexpected principle type: " + p.getName());
+                    log.warn("Unexpected principle type '{}', assuming correct.", p.getClass().getName());
                 }
             }
             setupAfterConnect(secureSocket);
             return parseCapabilities();
-
         } else {
             return resp;
         }
@@ -338,7 +338,6 @@ public class ManageSieveClient {
         if (token != StreamTokenizer.TT_EOL) {
             throw new ParseException("Expecting EOL but got " + tokenToString(token) + " at line " + in.lineno());
         }
-        log.debug("Got scirpt, parsing response");
         return parseResponse();
     }
 
