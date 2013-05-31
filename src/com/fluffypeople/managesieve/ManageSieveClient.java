@@ -649,7 +649,7 @@ public class ManageSieveClient {
     private void setupAfterConnect(Socket sock) throws IOException {
         sock.setSoTimeout(5000);
         byteStream = new BufferedInputStream(sock.getInputStream());
-        in = new StreamTokenizer(new InputStreamReader(byteStream));
+        in = new StreamTokenizer(new InputStreamReader(byteStream,UTF8));
         setupTokenizer();
         out = new PrintWriter(new OutputStreamWriter(sock.getOutputStream()));
     }
