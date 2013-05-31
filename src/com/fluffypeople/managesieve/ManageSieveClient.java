@@ -36,7 +36,11 @@ import java.security.Principal;
 import java.util.List;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
+import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
+import javax.security.auth.callback.NameCallback;
+import javax.security.auth.callback.PasswordCallback;
+import javax.security.auth.callback.UnsupportedCallbackException;
 import javax.security.auth.x500.X500Principal;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
@@ -51,7 +55,7 @@ import org.apache.log4j.Logger;
  * href="http://tools.ietf.org/html/rfc5228">rfc5228>/a>). <p> This class
  * manages the client side of the connection. The basic pattern is connect,
  * upgrade to TLS, authenticate, issue commands, logout, close connection. <p>
- * Most commands take string arguments and return {@link SieveResponse} objects.
+ * Most commands take string arguments and return {@link ManageSieveResponse} objects.
  * {@link #putscript} takes an {@link SieveScript} as an argument and stores the
  * result in that object.
  *
@@ -94,7 +98,7 @@ public class ManageSieveClient {
     /**
      * Connect to remote server
      *
-     * @return SieveResponse OK on connect, NO on connection problems
+     * @return ManageSieveResponse OK on connect, NO on connection problems
      * @throws IOException if there are underlying IO issues
      * @throws ParseException if we can't parse the response from the server
      */
@@ -110,7 +114,7 @@ public class ManageSieveClient {
      * Upgrade connection to TLS. Should be called before authenticating,
      * especialy if you are using the PLAIN scheme.
      *
-     * @return SieveResponse OK on successful upgrade, NO on error or if the
+     * @return ManageSieveResponse OK on successful upgrade, NO on error or if the
      * server doesn't support SSL
      * @throws IOException
      * @throws ParseException
@@ -124,7 +128,7 @@ public class ManageSieveClient {
      * especially if you are using the PLAIN scheme.
      *
      * @param sslSocketFactory
-     * @return SieveResponse OK on successful upgrade, NO on error or if the
+     * @return ManageSieveResponse OK on successful upgrade, NO on error or if the
      * server doesn't support SSL
      * @throws IOException
      * @throws ParseException
@@ -181,7 +185,7 @@ public class ManageSieveClient {
      *
      * @param cbh CallbackHandler[] list of calbacks that will be called by the
      * SASL code
-     * @return SieveResponse from the server, OK is aithenticated, NO means a
+     * @return ManageSieveResponse from the server, OK is aithenticated, NO means a
      * problem
      * @throws SaslException
      * @throws IOException
@@ -226,6 +230,32 @@ public class ManageSieveClient {
     }
 
     /**
+     * Authenticate against the remote server using SAS, using the
+     * given username and password.
+     * @param username String username to authenticate with.
+     * @param password String password to authenticate with.
+     * @return OK on success, NO otherwise.
+     */
+    public synchronized ManageSieveResponse authenticate(final String username, final String password) throws SaslException, IOException, ParseException {
+      CallbackHandler cbh = new CallbackHandler() {
+     
+          @Override
+          public void handle(Callback[] clbcks) throws IOException,  UnsupportedCallbackException {
+              for (Callback cb : clbcks) {
+                  if (cb instanceof NameCallback) {
+                      NameCallback name = (NameCallback) cb;
+                      name.setName(username);
+                  } else if (cb instanceof PasswordCallback) {
+                      PasswordCallback passwd = (PasswordCallback) cb;
+                      passwd.setPassword(password.toCharArray());
+                  }
+              }
+          }
+      };
+      return authenticate(cbh);
+    }
+    
+    /**
      * "This command lists the scripts the user has on the server". The results
      * are stored into the @code{List<SieveScript>} passed in. Any
      * existing contents of this list will be lost. Up to one of the scripts listed
@@ -233,7 +263,7 @@ public class ManageSieveClient {
      *
      * @param scripts @code{List<SieveScript>} non-null List of scripts. Will be
      * cleared if not zero length, even if there is a problem
-     * @return SieveResponse OK - list was fetched, NO - there was a problem.
+     * @return ManageSieveResponse OK - list was fetched, NO - there was a problem.
      * @throws IOException
      * @throws ParseException
      */

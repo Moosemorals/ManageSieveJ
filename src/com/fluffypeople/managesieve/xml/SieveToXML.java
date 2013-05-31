@@ -21,8 +21,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package com.fluffypeople.managesieve;
+package com.fluffypeople.managesieve.xml;
 
+import com.fluffypeople.managesieve.ParseException;
+import com.fluffypeople.xml.XML;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.StreamTokenizer;
