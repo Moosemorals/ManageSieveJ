@@ -111,6 +111,14 @@ public class ManageSieveClient {
     }
 
     /**
+     * Returns true if the unerlying socket is connected.
+     * @return 
+     */
+    public synchronized boolean isConnected() {
+        return socket.isConnected();
+    }
+    
+    /**
      * Upgrade connection to TLS. Should be called before authenticating,
      * especialy if you are using the PLAIN scheme.
      *
@@ -664,7 +672,7 @@ public class ManageSieveClient {
         in.eolIsSignificant(true);
     }
 
-    private static String tokenToString(final int c) {
+    private String tokenToString(final int c) {
         if (c > 0) {
 
             return new String(Character.toChars(c));
@@ -677,7 +685,7 @@ public class ManageSieveClient {
                 case StreamTokenizer.TT_EOL:
                     return "EOL";
                 case StreamTokenizer.TT_WORD:
-                    return "WORD";
+                    return ("WORD [" + in.sval + "]");
                 default:
                     return "UNKNOWN";
             }
