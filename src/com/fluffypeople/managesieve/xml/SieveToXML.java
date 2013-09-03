@@ -24,12 +24,12 @@
 package com.fluffypeople.managesieve.xml;
 
 import com.fluffypeople.managesieve.ParseException;
-import com.fluffypeople.xml.XML;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.StreamTokenizer;
 import java.io.StringReader;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Convert a Sieve script to its XML representation.
@@ -38,7 +38,7 @@ import org.apache.log4j.Logger;
  */
 public class SieveToXML {
 
-    private static final Logger log = Logger.getLogger(SieveToXML.class);
+    private static final Logger log = LoggerFactory.getLogger(SieveToXML.class);
     private StreamTokenizer in;
     private static final String[] CONTROL_NAMES = {"if", "elsif", "else", "stop", "require"};
 
@@ -179,7 +179,7 @@ public class SieveToXML {
                                 try {
                                     line.append(Character.toChars(token));
                                 } catch (java.lang.IllegalArgumentException ex) {
-                                    log.error(token + " is not a valid char ");
+                                    log.error("{} is not a valid char ",token);
                                     throw ex;
                                 }
                             }

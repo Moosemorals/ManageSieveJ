@@ -46,7 +46,8 @@ import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
 import org.apache.commons.codec.binary.Base64;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A client for the Manage Sieve protocol. Manage sieve (<a
@@ -63,7 +64,7 @@ import org.apache.log4j.Logger;
  */
 public class ManageSieveClient {
 
-    private static final Logger log = Logger.getLogger(ManageSieveClient.class);
+    private static final Logger log = LoggerFactory.getLogger(ManageSieveClient.class);
     private static final Charset UTF8 = Charset.forName("UTF-8");
     private static final char DQUOTE = '"';
     private static final char LEFT_CURRLY_BRACE = '{';
@@ -157,7 +158,7 @@ public class ManageSieveClient {
                         throw new IOException("Secure connect failed: Server name " + serverName + " doesn't match wanted " + hostname);
                     }
                 } else {
-                    log.warn("Unexpected principle type: " + p.getName());
+                    log.warn("Unexpected principle: {}", p.getName());
                 }
             }
             setupAfterConnect(secureSocket);
@@ -569,7 +570,7 @@ public class ManageSieveClient {
             // Drop out of the tokenizer to read the raw bytes...
             
             StringBuilder rawString = new StringBuilder();
-            log.debug("Raw string: reading " + length + " bytes");
+            log.debug("Raw string: reading {} bytes",  length);
             
             in.resetSyntax();
             int count = 0;
