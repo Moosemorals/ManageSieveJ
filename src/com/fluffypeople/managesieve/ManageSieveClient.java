@@ -115,7 +115,7 @@ public class ManageSieveClient {
     }
 
     /**
-     * Returns true if the unerlying socket is connected.
+     * Returns true if the underlying socket is connected.
      *
      * @return
      */
@@ -125,7 +125,7 @@ public class ManageSieveClient {
 
     /**
      * Upgrade connection to TLS. Should be called before authenticating,
-     * especialy if you are using the PLAIN scheme.
+     * especially if you are using the PLAIN scheme.
      *
      * @return ManageSieveResponse OK on successful upgrade, NO on error or if
      * the server doesn't support SSL
