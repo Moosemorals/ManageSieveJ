@@ -53,12 +53,15 @@ import org.slf4j.LoggerFactory;
  * A client for the Manage Sieve protocol. Manage sieve (<a
  * href="http://tools.ietf.org/html/rfc5804">rfc5804</a>) is used to manage the
  * sieve mail filtering scripts on a server. (Sieve is defined in <a
- * href="http://tools.ietf.org/html/rfc5228">rfc5228>/a>). <p> This class
- * manages the client side of the connection. The basic pattern is connect,
- * upgrade to TLS, authenticate, issue commands, logout, close connection. <p>
- * Most commands take string arguments and return {@link ManageSieveResponse} objects.
- * {@link #putscript} takes an {@link SieveScript} as an argument and stores the
- * result in that object.
+ * href="http://tools.ietf.org/html/rfc5228">rfc5228>/a>).
+ * <p>
+ * This class manages the client side of the connection. The basic pattern is
+ * connect, upgrade to TLS, authenticate, issue commands, logout, close
+ * connection.
+ * <p>
+ * Most commands take string arguments and return {@link ManageSieveResponse}
+ * objects. {@link #putscript} takes an {@link SieveScript} as an argument and
+ * stores the result in that object.
  *
  * @author "Osric Wilkinson" <osric@fluffypeople.com>
  */
@@ -87,7 +90,7 @@ public class ManageSieveClient {
     }
 
     /**
-     * Get the current known server capabilties. Will return null if called
+     * Get the current known server capabilities. Will return null if called
      * before the server has been connected.
      *
      * @return
@@ -113,18 +116,19 @@ public class ManageSieveClient {
 
     /**
      * Returns true if the unerlying socket is connected.
-     * @return 
+     *
+     * @return
      */
     public synchronized boolean isConnected() {
         return socket.isConnected();
     }
-    
+
     /**
      * Upgrade connection to TLS. Should be called before authenticating,
      * especialy if you are using the PLAIN scheme.
      *
-     * @return ManageSieveResponse OK on successful upgrade, NO on error or if the
-     * server doesn't support SSL
+     * @return ManageSieveResponse OK on successful upgrade, NO on error or if
+     * the server doesn't support SSL
      * @throws IOException
      * @throws ParseException
      */
@@ -137,8 +141,8 @@ public class ManageSieveClient {
      * especially if you are using the PLAIN scheme.
      *
      * @param sslSocketFactory
-     * @return ManageSieveResponse OK on successful upgrade, NO on error or if the
-     * server doesn't support SSL
+     * @return ManageSieveResponse OK on successful upgrade, NO on error or if
+     * the server doesn't support SSL
      * @throws IOException
      * @throws ParseException
      */
@@ -149,7 +153,7 @@ public class ManageSieveClient {
             secureSocket = (SSLSocket) sslSocketFactory.createSocket(socket, socket.getInetAddress().getHostAddress(), socket.getPort(), true);
             if (rfcCheck) {
                 // The manage sieve rfc says we should check that the name in the certificate
-                // matches the hostname that we want. 
+                // matches the hostname that we want.
 
                 Principal p = secureSocket.getSession().getPeerPrincipal();
                 if (p instanceof X500Principal) {
@@ -172,7 +176,7 @@ public class ManageSieveClient {
     /**
      * Authenticate against the remote server using SASL.
      *
-     * The CallbackHandler should be setup apropriatly, for example:
+     * The CallbackHandler should be setup appropriately, for example:
      * <pre>
      * <code>
      *
@@ -192,10 +196,10 @@ public class ManageSieveClient {
      * </code>
      * </pre>
      *
-     * @param cbh CallbackHandler[] list of calbacks that will be called by the
-     * SASL code
-     * @return ManageSieveResponse from the server, OK is aithenticated, NO means a
-     * problem
+     * @param cbh CallbackHandler[] list of call backs that will be called by
+     * the SASL code
+     * @return ManageSieveResponse from the server, OK is authenticated, NO
+     * means a problem
      * @throws SaslException
      * @throws IOException
      * @throws ParseException
@@ -239,40 +243,42 @@ public class ManageSieveClient {
     }
 
     /**
-     * Authenticate against the remote server using SAS, using the
-     * given username and password.
+     * Authenticate against the remote server using SAS, using the given
+     * username and password.
+     *
      * @param username String username to authenticate with.
      * @param password String password to authenticate with.
      * @return OK on success, NO otherwise.
      */
     public synchronized ManageSieveResponse authenticate(final String username, final String password) throws SaslException, IOException, ParseException {
-      CallbackHandler cbh = new CallbackHandler() {
-     
-          @Override
-          public void handle(Callback[] clbcks) throws IOException,  UnsupportedCallbackException {
-              for (Callback cb : clbcks) {
-                  if (cb instanceof NameCallback) {
-                      NameCallback name = (NameCallback) cb;
-                      name.setName(username);
-                  } else if (cb instanceof PasswordCallback) {
-                      PasswordCallback passwd = (PasswordCallback) cb;
-                      passwd.setPassword(password.toCharArray());
-                  }
-              }
-          }
-      };
-      return authenticate(cbh);
+        CallbackHandler cbh = new CallbackHandler() {
+
+            @Override
+            public void handle(Callback[] clbcks) throws IOException, UnsupportedCallbackException {
+                for (Callback cb : clbcks) {
+                    if (cb instanceof NameCallback) {
+                        NameCallback name = (NameCallback) cb;
+                        name.setName(username);
+                    } else if (cb instanceof PasswordCallback) {
+                        PasswordCallback passwd = (PasswordCallback) cb;
+                        passwd.setPassword(password.toCharArray());
+                    }
+                }
+            }
+        };
+        return authenticate(cbh);
     }
-    
+
     /**
      * "This command lists the scripts the user has on the server". The results
-     * are stored into the @code{List<SieveScript>} passed in. Any
-     * existing contents of this list will be lost. Up to one of the scripts listed
-     * will be marked active.
+     * are stored into the @code{List<SieveScript>} passed in. Any existing
+     * contents of this list will be lost. Up to one of the scripts listed will
+     * be marked active.
      *
      * @param scripts @code{List<SieveScript>} non-null List of scripts. Will be
      * cleared if not zero length, even if there is a problem
-     * @return ManageSieveResponse OK - list was fetched, NO - there was a problem.
+     * @return ManageSieveResponse OK - list was fetched, NO - there was a
+     * problem.
      * @throws IOException
      * @throws ParseException
      */
@@ -342,9 +348,12 @@ public class ManageSieveClient {
      * the server". This will overwrite any existing script with the same name.
      * The active state of the named script is not changed (so replacing an
      * active script leaves that script active, otherwise the script will not be
-     * active until SETACTIVE is used). <p> The server will check the script is
-     * valid before storing (and overwriting if needed) the script, and will
-     * return parse errors in the "Human readable" part of the response. <p>
+     * active until SETACTIVE is used).
+     * <p>
+     * The server will check the script is valid before storing (and overwriting
+     * if needed) the script, and will return parse errors in the "Human
+     * readable" part of the response.
+     * <p>
      * Even if the script is valid the response may contain WARNINGS.
      *
      *
@@ -363,7 +372,7 @@ public class ManageSieveClient {
 
     /**
      * "This command gets the contents of the specified script". The name of the
-     * script is taken from the script param, and the body is stored in the
+     * script is taken from the script parameter, and the body is stored in the
      * object
      *
      * @param script SieveScript to fetch/update
@@ -397,8 +406,9 @@ public class ManageSieveClient {
     /**
      * "This command sets a script active". The active script is the one used by
      * the MDA to filter incoming mail. It is not an error to have no scripts
-     * active, or to set the same script active twice. <p> Use the empty string
-     * ("") to set no scripts active.
+     * active, or to set the same script active twice.
+     * <p>
+     * Use the empty string ("") to set no scripts active.
      *
      * @param name String name of the script to set active
      * @return
@@ -535,7 +545,7 @@ public class ManageSieveClient {
                 token = in.nextToken();
             }
 
-            // Done, end of line            
+            // Done, end of line
             if (token != StreamTokenizer.TT_EOL) {
                 throw new ParseException("Expecting EOL got " + tokenToString(token) + " at line " + in.lineno());
             }
@@ -568,10 +578,10 @@ public class ManageSieveClient {
                 throw new ParseException("Expecting EOL got " + tokenToString(token) + " at line " + in.lineno());
             }
             // Drop out of the tokenizer to read the raw bytes...
-            
+
             StringBuilder rawString = new StringBuilder();
-            log.debug("Raw string: reading {} bytes",  length);
-            
+            log.debug("Raw string: reading {} bytes", length);
+
             in.resetSyntax();
             int count = 0;
             while (count < length) {
@@ -588,10 +598,10 @@ public class ManageSieveClient {
                     count += chars.length;
                 }
             }
-            
+
             // Remember to reset the tokenizer now we're done
             setupTokenizer();
-            
+
             return rawString.toString();
         } else {
             throw new ParseException("Expecing DQUOTE or {, got " + tokenToString(token) + " at line " + in.lineno());
@@ -650,7 +660,7 @@ public class ManageSieveClient {
     private void setupAfterConnect(Socket sock) throws IOException {
         sock.setSoTimeout(5000);
         byteStream = new BufferedInputStream(sock.getInputStream());
-        in = new StreamTokenizer(new InputStreamReader(byteStream,UTF8));
+        in = new StreamTokenizer(new InputStreamReader(byteStream, UTF8));
         setupTokenizer();
         out = new PrintWriter(new OutputStreamWriter(sock.getOutputStream()));
     }
