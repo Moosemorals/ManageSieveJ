@@ -31,6 +31,7 @@ import java.io.PrintWriter;
 import java.io.StreamTokenizer;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.net.SocketException;
 import java.nio.charset.Charset;
 import java.security.Principal;
 import java.util.List;
@@ -82,6 +83,7 @@ public class ManageSieveClient {
     private BufferedInputStream byteStream;
     private PrintWriter out;
     private String hostname;
+    private int socketTimeout = 0; // Default socket timeout is zero, or don't time out.
 
     /**
      * Public constructor.
@@ -97,6 +99,49 @@ public class ManageSieveClient {
      */
     public ServerCapabilities getCapabilities() {
         return cap;
+    }
+
+    /**
+     * Returns setting for SO_TIMEOUT. 0 returns implies that the option is
+     * disabled (i.e., timeout of infinity).</p>
+     *
+     * If the socket isn't connected, return the cached value that will be set
+     * once the socket does connect.</p>
+     *
+     *
+     * @return the setting for SO_TIMEOUT
+     * @throws SocketException - if there is an error in the underlying
+     * protocol, such as a TCP error.
+     * @see java.net.Socket#getSoTimeout(int)
+     */
+    public int getSocketTimeout() throws SocketException {
+        return socket != null ? socket.getSoTimeout() : socketTimeout;
+    }
+
+    /**
+     * Set SO_TIMEOUT. Updates a connected socket (and is stored for use when a
+     * socket connects).</p>
+     *
+     * From <code>Socket.setSoTimeout</code>: "Enable/disable SO_TIMEOUT with
+     * the specified timeout, in milliseconds. With this option set to a
+     * non-zero timeout, a read() call on the InputStream associated with this
+     * Socket will block for only this amount of time. If the timeout expires, a
+     * java.net.SocketTimeoutException is raised, though the Socket is still
+     * valid. The option must be enabled prior to entering the blocking
+     * operation to have effect. The timeout must be > 0. A timeout of zero is
+     * interpreted as an infinite timeout."</p>
+     *
+     * @param timeout the specified timeout, in milliseconds.
+     * @throws SocketException if there is an error in the underlying protocol,
+     * such as a TCP error.
+     *
+     * @see java.net.Socket#setSoTimeout(int)
+     */
+    public void setSocketTimeout(int timeout) throws SocketException {
+        this.socketTimeout = timeout;
+        if (socket != null) {
+            socket.setSoTimeout(timeout);
+        }
     }
 
     /**
@@ -658,7 +703,7 @@ public class ManageSieveClient {
     }
 
     private void setupAfterConnect(Socket sock) throws IOException {
-        sock.setSoTimeout(5000);
+        sock.setSoTimeout(socketTimeout);
         byteStream = new BufferedInputStream(sock.getInputStream());
         in = new StreamTokenizer(new InputStreamReader(byteStream, UTF8));
         setupTokenizer();
