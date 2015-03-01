@@ -54,7 +54,7 @@ import org.slf4j.LoggerFactory;
  * A client for the Manage Sieve protocol. Manage sieve (<a
  * href="http://tools.ietf.org/html/rfc5804">rfc5804</a>) is used to manage the
  * sieve mail filtering scripts on a server. (Sieve is defined in <a
- * href="http://tools.ietf.org/html/rfc5228">rfc5228>/a>).
+ * href="http://tools.ietf.org/html/rfc5228">rfc5228</a>).
  * <p>
  * This class manages the client side of the connection. The basic pattern is
  * connect, upgrade to TLS, authenticate, issue commands, logout, close
