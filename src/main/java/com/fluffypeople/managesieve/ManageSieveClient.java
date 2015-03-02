@@ -243,15 +243,16 @@ public class ManageSieveClient {
      *
      * @param cbh CallbackHandler[] list of call backs that will be called by
      * the SASL code
+     * @param authId the authorization ID
      * @return ManageSieveResponse from the server, OK is authenticated, NO
      * means a problem
      * @throws SaslException
      * @throws IOException
      * @throws ParseException
      */
-    public synchronized ManageSieveResponse authenticate(final CallbackHandler cbh) throws SaslException, IOException, ParseException {
+    public synchronized ManageSieveResponse authenticate(final CallbackHandler cbh, String authId) throws SaslException, IOException, ParseException {
 
-        SaslClient sc = Sasl.createSaslClient(cap.getSASLMethods(), null, "sieve", hostname, null, cbh);
+        SaslClient sc = Sasl.createSaslClient(cap.getSASLMethods(), authId, "sieve", hostname, null, cbh);
 
         String mechanism = escapeString(sc.getMechanismName());
         if (sc.hasInitialResponse()) {
@@ -296,6 +297,19 @@ public class ManageSieveClient {
      * @return OK on success, NO otherwise.
      */
     public synchronized ManageSieveResponse authenticate(final String username, final String password) throws SaslException, IOException, ParseException {
+        return authenticate(username, password, null);
+    }
+
+    /**
+     * Authenticate against the remote server using SAS, using the given
+     * username and password.
+     *
+     * @param username String username to authenticate with.
+     * @param password String password to authenticate with.
+     * @param authId String authentication ID (may be null).
+     * @return OK on success, NO otherwise.
+     */
+    public synchronized ManageSieveResponse authenticate(final String username, final String password, String authId) throws SaslException, IOException, ParseException {
         CallbackHandler cbh = new CallbackHandler() {
 
             @Override
@@ -311,7 +325,7 @@ public class ManageSieveClient {
                 }
             }
         };
-        return authenticate(cbh);
+        return authenticate(cbh, authId);
     }
 
     /**
