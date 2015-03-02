@@ -424,7 +424,7 @@ public class ManageSieveClient {
      * @return OK or NO response.
      */
     public synchronized ManageSieveResponse getScript(SieveScript script) throws IOException, ParseException {
-        String encodedName = encodeString(script.getName());
+        String encodedName = escapeString(script.getName());
         sendCommand("GETSCRIPT", encodedName);
         script.setBody(parseString());
         int token = in.nextToken();
