@@ -440,12 +440,9 @@ public class ManageSieveClient {
     public synchronized ManageSieveResponse getScript(SieveScript script) throws IOException, ParseException {
         String encodedName = escapeString(script.getName());
         sendCommand("GETSCRIPT", encodedName);
-        script.setBody(parseString());
-        int token = in.nextToken();
-        if (token != StreamTokenizer.TT_EOL) {
-            throw new ParseException("Expecting EOL but got " + tokenToString(token) + " at line " + in.lineno());
-        }
-        return parseResponse();
+        ResponseAndPayload responseAndPayload = this.parseResponseWithPayload();
+        script.setBody(responseAndPayload.getPayload());
+        return responseAndPayload.getResponse();
     }
 
     /**
@@ -572,8 +569,13 @@ public class ManageSieveClient {
     }
 
     private ManageSieveResponse parseResponse() throws IOException, ParseException {
+        in.nextToken();
+        return parseResponseFromCurrentToken();
+    }
+
+    private ManageSieveResponse parseResponseFromCurrentToken() throws IOException, ParseException {
         ManageSieveResponse resp = new ManageSieveResponse();
-        int token = in.nextToken();
+        int token = in.ttype;
         if (token == StreamTokenizer.TT_WORD) {
             // Get the type (OK NO BYTE)
             resp.setType(in.sval);
@@ -615,8 +617,33 @@ public class ManageSieveClient {
         return resp;
     }
 
-    private String parseString() throws IOException, ParseException {
+    private ResponseAndPayload parseResponseWithPayload() throws IOException, ParseException {
         int token = in.nextToken();
+        String payload;
+        ManageSieveResponse response;
+        if (token == StreamTokenizer.TT_WORD) {
+            payload = null;
+            response = parseResponseFromCurrentToken();
+        }
+        else {
+            payload = parseStringFromCurrentToken();
+            int nextToken = in.nextToken();
+            if (nextToken != StreamTokenizer.TT_EOL) {
+                throw new ParseException("Expecting EOL but got " + tokenToString(token)
+                        + " at line " + in.lineno());
+            }
+            response = parseResponse();
+        }
+        return new ResponseAndPayload(response, payload);
+    }
+
+    private String parseString() throws IOException, ParseException {
+        in.nextToken();
+        return parseStringFromCurrentToken();
+    }
+
+    private String parseStringFromCurrentToken() throws IOException, ParseException {
+        int token = in.ttype;
         if (token == DQUOTE) {
             return in.sval;
         } else if (token == '{') {
