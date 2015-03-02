@@ -686,7 +686,7 @@ public class ManageSieveClient {
 
         result.append("{");
         result.append(Integer.toString(raw.getBytes(UTF8).length));
-        result.append("}");
+        result.append("+}");
         result.append(CRLF);
         result.append(raw);
 
