@@ -27,6 +27,7 @@ package com.fluffypeople.managesieve;
  *
  * @author "Osric Wilkinson" <osric@fluffypeople.com>
  */
+@SuppressWarnings("serial")
 public class ParseException extends Exception {
 
     /**
