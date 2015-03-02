@@ -29,7 +29,9 @@ package com.fluffypeople.managesieve;
  */
 public class ParseException extends Exception {
 
-    /**
+    private static final long serialVersionUID = 8048596239592054730L;
+
+	/**
      * Creates a new instance of
      * <code>ParseException</code> without detail message.
      */
