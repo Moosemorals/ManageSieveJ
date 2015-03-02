@@ -423,7 +423,7 @@ public class ManageSieveClient {
      * @throws ParseException
      */
     public synchronized ManageSieveResponse putscript(final String name, final String body) throws IOException, ParseException {
-        String encodedName = encodeString(name);
+        String encodedName = escapeString(name);
         String encodedBody = encodeString(body);
         sendCommand("PUTSCRIPT", encodedName, encodedBody);
         return parseResponse();
