@@ -457,7 +457,7 @@ public class ManageSieveClient {
      * @throws ParseException
      */
     public synchronized ManageSieveResponse deletescript(final String name) throws IOException, ParseException {
-        String encodedName = encodeString(name);
+        String encodedName = escapeString(name);
         sendCommand("DELETESCRIPT", encodedName);
         return parseResponse();
     }
