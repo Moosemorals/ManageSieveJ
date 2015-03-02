@@ -2,6 +2,7 @@
  * The MIT License
  *
  * Copyright 2013-2015 "Osric Wilkinson" <osric@fluffypeople.com>.
+ * Copyright 2015 Linagora.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +27,7 @@ package com.fluffypeople.managesieve;
 /**
  *
  * @author "Osric Wilkinson" <osric@fluffypeople.com>
+ * @author Linagora
  */
 @SuppressWarnings("serial")
 public class ParseException extends Exception {

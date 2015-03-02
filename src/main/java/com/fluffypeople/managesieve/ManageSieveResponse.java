@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
  * giving more detail (which may have a {@link #subCode()}.
  *
  * @author "Osric Wilkinson" <osric@fluffypeople.com>
+ * @author Linagora
  */
 public class ManageSieveResponse {
 
