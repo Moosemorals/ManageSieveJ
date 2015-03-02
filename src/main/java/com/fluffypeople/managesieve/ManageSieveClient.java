@@ -705,7 +705,7 @@ public class ManageSieveClient {
         result.append(DQUOTE);
         Matcher matcher = ESCAPE_RE.matcher(raw);
         String escaped = matcher.replaceAll("\\\\$1");
-        if ((escaped.length() - DQUOTE_LENGTH) > MAX_ESCAPED_STRING_LENGTH) {
+        if ((escaped.getBytes(UTF8).length - DQUOTE_LENGTH) > MAX_ESCAPED_STRING_LENGTH) {
             throw new IllegalArgumentException(String.format(
                     "The maximum size of of an escaped string should be <= %d",
                     MAX_ESCAPED_STRING_LENGTH));
