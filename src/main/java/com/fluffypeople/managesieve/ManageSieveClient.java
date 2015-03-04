@@ -35,6 +35,9 @@ import java.net.SocketException;
 import java.nio.charset.Charset;
 import java.security.Principal;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import javax.security.auth.callback.Callback;
@@ -76,6 +79,9 @@ public class ManageSieveClient {
     private static final char RIGHT_BRACKET = ')';
     private static final String CRLF = "\r\n";
     private static final char SP = ' ';
+    private final static Pattern ESCAPE_RE = Pattern.compile("([\"\\\\])");
+    private final static int DQUOTE_LENGTH = 1;
+    private final static int MAX_ESCAPED_STRING_LENGTH = 1024;
     private Socket socket = null;
     private SSLSocket secureSocket = null;
     private ServerCapabilities cap;
@@ -697,7 +703,14 @@ public class ManageSieveClient {
     private String escapeString(final String raw) {
         StringBuilder result = new StringBuilder();
         result.append(DQUOTE);
-        result.append(raw);
+        Matcher matcher = ESCAPE_RE.matcher(raw);
+        String escaped = matcher.replaceAll("\\\\$1");
+        if ((escaped.getBytes(UTF8).length - DQUOTE_LENGTH) > MAX_ESCAPED_STRING_LENGTH) {
+            throw new IllegalArgumentException(String.format(
+                    "The maximum size of of an escaped string should be <= %d",
+                    MAX_ESCAPED_STRING_LENGTH));
+        }
+        result.append(escaped);
         result.append(DQUOTE);
         return result.toString();
     }
