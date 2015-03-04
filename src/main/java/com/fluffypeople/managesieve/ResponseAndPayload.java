@@ -23,7 +23,10 @@
  * THE SOFTWARE.
  */
 package com.fluffypeople.managesieve;
-
+/**
+ *  Hold a response from a Manage Sieve server that also has a payload.
+ *  @author Linagora
+ */
 public class ResponseAndPayload {
     private ManageSieveResponse response;
     private String payload;

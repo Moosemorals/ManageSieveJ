@@ -1,7 +1,7 @@
 /*
  * The MIT License
  *
- * Copyright 2013 "Osric Wilkinson" <osric@fluffypeople.com>.
+ * Copyright 2013-2015 "Osric Wilkinson" <osric@fluffypeople.com>.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,7 +29,7 @@ import java.util.Set;
 
 /**
  * Holds deatils about the a servers capabilities.
- * @author "Osric Wilkinson" <osric@fluffypeople.com>
+ * @author "Osric Wilkinson" &lt;osric@fluffypeople.com&gt;
  */
 public class ServerCapabilities {
 

@@ -1,7 +1,7 @@
 /*
  * The MIT License
  *
- * Copyright 2013 "Osric Wilkinson" <osric@fluffypeople.com>.
+ * Copyright 2013-2015 "Osric Wilkinson" <osric@fluffypeople.com>.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -45,7 +45,7 @@ import javax.net.ssl.X509TrustManager;
  * An example of how to use this package to connect and list scripts held on a
  * server.
  *
- * @author "Osric Wilkinson" <osric@fluffypeople.com>
+ * @author "Osric Wilkinson" &lt;osric@fluffypeople.com&gt;
  */
 public class ConnectAndListScripts {
 

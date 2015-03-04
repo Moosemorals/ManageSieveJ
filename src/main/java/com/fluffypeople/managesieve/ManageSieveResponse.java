@@ -1,7 +1,8 @@
 /*
  * The MIT License
  *
- * Copyright 2013 "Osric Wilkinson" <osric@fluffypeople.com>.
+ * Copyright 2013-2015 "Osric Wilkinson" <osric@fluffypeople.com>.
+ * Copyright 2015 Linagora
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,7 +34,8 @@ import org.slf4j.LoggerFactory;
  * the server is closing the connection). Some responses include a <code>Code</code>
  * giving more detail (which may have a <code>subCode()</code>.
  *
- * @author "Osric Wilkinson" &gt;osric@fluffypeople.com&lt;
+ * @author "Osric Wilkinson" &lt;osric@fluffypeople.com&gt;
+ * @author Linagora
  */
 public class ManageSieveResponse {
 
