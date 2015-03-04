@@ -100,8 +100,6 @@ public class ManageSieveClient {
     /**
      * Get the current known server capabilities. Will return null if called
      * before the server has been connected.
-     *
-     * @return
      */
     public ServerCapabilities getCapabilities() {
         return cap;
@@ -118,7 +116,7 @@ public class ManageSieveClient {
      * @return the setting for SO_TIMEOUT
      * @throws SocketException - if there is an error in the underlying
      * protocol, such as a TCP error.
-     * @see java.net.Socket#getSoTimeout(int)
+     * @see java.net.Socket#getSoTimeout()
      */
     public int getSocketTimeout() throws SocketException {
         return socket != null ? socket.getSoTimeout() : socketTimeout;
@@ -167,8 +165,6 @@ public class ManageSieveClient {
 
     /**
      * Returns true if the underlying socket is connected.
-     *
-     * @return
      */
     public synchronized boolean isConnected() {
         return socket.isConnected();
@@ -397,7 +393,7 @@ public class ManageSieveClient {
      *
      * @param name
      * @param size
-     * @return
+     * @return OK if there is space, NO on error
      * @throws IOException
      * @throws ParseException
      */
@@ -473,7 +469,7 @@ public class ManageSieveClient {
      * Use the empty string ("") to set no scripts active.
      *
      * @param name String name of the script to set active
-     * @return
+     * @return OK on success, NO on error
      * @throws IOException
      * @throws ParseException
      */

@@ -30,10 +30,10 @@ import org.slf4j.LoggerFactory;
 /**
  * Store the response from the Manage Sieve server. <p> Generally this will be
  * either OK (indicating success), NO (indicating failure) or BYE (indicating
- * the server is closing the connection). Some responses include a {@link #Code}
- * giving more detail (which may have a {@link #subCode()}.
+ * the server is closing the connection). Some responses include a <code>Code</code>
+ * giving more detail (which may have a <code>subCode()</code>.
  *
- * @author "Osric Wilkinson" <osric@fluffypeople.com>
+ * @author "Osric Wilkinson" &gt;osric@fluffypeople.com&lt;
  */
 public class ManageSieveResponse {
 
@@ -139,10 +139,10 @@ public class ManageSieveResponse {
 
     /**
      * Get the list of any sub-codes that makeup this response. May be null. If
-     * this is not null the first element will be the string represnetation of
+     * this is not null the first element will be the string representation of
      * {@link #getCode()}.
      *
-     * @return
+     * @return Array of String sub-codes. May be null.
      */
     public String[] getSubCodes() {
         return Arrays.copyOf(subCodes, subCodes.length);

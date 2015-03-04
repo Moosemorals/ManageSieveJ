@@ -77,7 +77,7 @@ public class XML {
     /**
      * Create a new XML document with a refrence to the given stylesheet
      *
-     * @param xstlRef the stylesheet to return
+     * @param xstRef the stylesheet to return
      * @return the new document
      */
     public static Document newDocument(String xstRef) {
@@ -145,7 +145,7 @@ public class XML {
      * @param tag String name of the elements
      * @param attributes String list of attribute name, value pairs. Must be an even
      * length list, null values will be ignored.
-     * @return
+     * @return XML object, for chaining
      */
     public XML start(final String tag, final String... attributes) {
         Element e = root.createElement(tag);
@@ -260,7 +260,7 @@ public class XML {
      * Add a copy of an existing node to the tree. May be from this document or
      * another one.
      *
-     * @param node Source node
+     * @param source Source node
      * @param deep boolean true if child nodes are to be copied too
      */
     public XML add(Node source, boolean deep) {
