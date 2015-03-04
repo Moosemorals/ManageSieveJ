@@ -35,6 +35,9 @@ import java.net.SocketException;
 import java.nio.charset.Charset;
 import java.security.Principal;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import javax.security.auth.callback.Callback;
@@ -76,6 +79,9 @@ public class ManageSieveClient {
     private static final char RIGHT_BRACKET = ')';
     private static final String CRLF = "\r\n";
     private static final char SP = ' ';
+    private final static Pattern ESCAPE_RE = Pattern.compile("([\"\\\\])");
+    private final static int DQUOTE_LENGTH = 1;
+    private final static int MAX_ESCAPED_STRING_LENGTH = 1024;
     private Socket socket = null;
     private SSLSocket secureSocket = null;
     private ServerCapabilities cap;
@@ -243,15 +249,16 @@ public class ManageSieveClient {
      *
      * @param cbh CallbackHandler[] list of call backs that will be called by
      * the SASL code
+     * @param authId the authorization ID
      * @return ManageSieveResponse from the server, OK is authenticated, NO
      * means a problem
      * @throws SaslException
      * @throws IOException
      * @throws ParseException
      */
-    public synchronized ManageSieveResponse authenticate(final CallbackHandler cbh) throws SaslException, IOException, ParseException {
+    public synchronized ManageSieveResponse authenticate(final CallbackHandler cbh, String authId) throws SaslException, IOException, ParseException {
 
-        SaslClient sc = Sasl.createSaslClient(cap.getSASLMethods(), null, "sieve", hostname, null, cbh);
+        SaslClient sc = Sasl.createSaslClient(cap.getSASLMethods(), authId, "sieve", hostname, null, cbh);
 
         String mechanism = escapeString(sc.getMechanismName());
         if (sc.hasInitialResponse()) {
@@ -296,6 +303,19 @@ public class ManageSieveClient {
      * @return OK on success, NO otherwise.
      */
     public synchronized ManageSieveResponse authenticate(final String username, final String password) throws SaslException, IOException, ParseException {
+        return authenticate(username, password, null);
+    }
+
+    /**
+     * Authenticate against the remote server using SAS, using the given
+     * username and password.
+     *
+     * @param username String username to authenticate with.
+     * @param password String password to authenticate with.
+     * @param authId String authentication ID (may be null).
+     * @return OK on success, NO otherwise.
+     */
+    public synchronized ManageSieveResponse authenticate(final String username, final String password, String authId) throws SaslException, IOException, ParseException {
         CallbackHandler cbh = new CallbackHandler() {
 
             @Override
@@ -311,7 +331,7 @@ public class ManageSieveClient {
                 }
             }
         };
-        return authenticate(cbh);
+        return authenticate(cbh, authId);
     }
 
     /**
@@ -426,12 +446,9 @@ public class ManageSieveClient {
     public synchronized ManageSieveResponse getScript(SieveScript script) throws IOException, ParseException {
         String encodedName = encodeString(script.getName());
         sendCommand("GETSCRIPT", encodedName);
-        script.setBody(parseString());
-        int token = in.nextToken();
-        if (token != StreamTokenizer.TT_EOL) {
-            throw new ParseException("Expecting EOL but got " + tokenToString(token) + " at line " + in.lineno());
-        }
-        return parseResponse();
+        ResponseAndPayload responseAndPayload = this.parseResponseWithPayload();
+        script.setBody(responseAndPayload.getPayload());
+        return responseAndPayload.getResponse();
     }
 
     /**
@@ -558,8 +575,13 @@ public class ManageSieveClient {
     }
 
     private ManageSieveResponse parseResponse() throws IOException, ParseException {
+        in.nextToken();
+        return parseResponseFromCurrentToken();
+    }
+
+    private ManageSieveResponse parseResponseFromCurrentToken() throws IOException, ParseException {
         ManageSieveResponse resp = new ManageSieveResponse();
-        int token = in.nextToken();
+        int token = in.ttype;
         if (token == StreamTokenizer.TT_WORD) {
             // Get the type (OK NO BYTE)
             resp.setType(in.sval);
@@ -601,8 +623,33 @@ public class ManageSieveClient {
         return resp;
     }
 
-    private String parseString() throws IOException, ParseException {
+    private ResponseAndPayload parseResponseWithPayload() throws IOException, ParseException {
         int token = in.nextToken();
+        String payload;
+        ManageSieveResponse response;
+        if (token == StreamTokenizer.TT_WORD) {
+            payload = null;
+            response = parseResponseFromCurrentToken();
+        }
+        else {
+            payload = parseStringFromCurrentToken();
+            int nextToken = in.nextToken();
+            if (nextToken != StreamTokenizer.TT_EOL) {
+                throw new ParseException("Expecting EOL but got " + tokenToString(token)
+                        + " at line " + in.lineno());
+            }
+            response = parseResponse();
+        }
+        return new ResponseAndPayload(response, payload);
+    }
+
+    private String parseString() throws IOException, ParseException {
+        in.nextToken();
+        return parseStringFromCurrentToken();
+    }
+
+    private String parseStringFromCurrentToken() throws IOException, ParseException {
+        int token = in.ttype;
         if (token == DQUOTE) {
             return in.sval;
         } else if (token == '{') {
@@ -656,7 +703,14 @@ public class ManageSieveClient {
     private String escapeString(final String raw) {
         StringBuilder result = new StringBuilder();
         result.append(DQUOTE);
-        result.append(raw);
+        Matcher matcher = ESCAPE_RE.matcher(raw);
+        String escaped = matcher.replaceAll("\\\\$1");
+        if ((escaped.getBytes(UTF8).length - DQUOTE_LENGTH) > MAX_ESCAPED_STRING_LENGTH) {
+            throw new IllegalArgumentException(String.format(
+                    "The maximum size of of an escaped string should be <= %d",
+                    MAX_ESCAPED_STRING_LENGTH));
+        }
+        result.append(escaped);
         result.append(DQUOTE);
         return result.toString();
     }
@@ -672,7 +726,7 @@ public class ManageSieveClient {
 
         result.append("{");
         result.append(Integer.toString(raw.getBytes(UTF8).length));
-        result.append("}");
+        result.append("+}");
         result.append(CRLF);
         result.append(raw);
 
