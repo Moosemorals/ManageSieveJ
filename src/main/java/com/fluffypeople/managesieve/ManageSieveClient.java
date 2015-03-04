@@ -427,7 +427,7 @@ public class ManageSieveClient {
      * @throws ParseException
      */
     public synchronized ManageSieveResponse putscript(final String name, final String body) throws IOException, ParseException {
-        String encodedName = encodeString(name);
+        String encodedName = escapeString(name);
         String encodedBody = encodeString(body);
         sendCommand("PUTSCRIPT", encodedName, encodedBody);
         return parseResponse();
@@ -442,7 +442,7 @@ public class ManageSieveClient {
      * @return OK or NO response.
      */
     public synchronized ManageSieveResponse getScript(SieveScript script) throws IOException, ParseException {
-        String encodedName = encodeString(script.getName());
+        String encodedName = escapeString(script.getName());
         sendCommand("GETSCRIPT", encodedName);
         ResponseAndPayload responseAndPayload = this.parseResponseWithPayload();
         script.setBody(responseAndPayload.getPayload());
@@ -458,7 +458,7 @@ public class ManageSieveClient {
      * @throws ParseException
      */
     public synchronized ManageSieveResponse deletescript(final String name) throws IOException, ParseException {
-        String encodedName = encodeString(name);
+        String encodedName = escapeString(name);
         sendCommand("DELETESCRIPT", encodedName);
         return parseResponse();
     }
@@ -476,7 +476,7 @@ public class ManageSieveClient {
      * @throws ParseException
      */
     public synchronized ManageSieveResponse setactive(final String name) throws IOException, ParseException {
-        String encodedName = encodeString(name);
+        String encodedName = escapeString(name);
         sendCommand("SETACTIVE", encodedName);
         return parseResponse();
     }
