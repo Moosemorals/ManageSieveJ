@@ -15,6 +15,13 @@ on [SLF4J][4] as its logging backend.
 There is an example use of the libray in the 
 com.fluffypeople.managesieve.examples package.
 
+# Maven
+    <dependency>
+      <groupId>com.fluffypeople</groupId>
+      <artifactId>managesievej</artifactId>
+      <version>0.1.0</version>
+    </dependency>
+
 # Licence
 
 This libary is covered by the MIT licence. 
