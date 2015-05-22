@@ -8,7 +8,7 @@ provides a Java API to the Manage Sieve protocol.
 # Dependencies
 
 This library depends on [Apache Commons Codec][3] for Base64 support. It also depends
-on [SLF4J][4] as its logging backend.
+on [SLF4J][4] as its logging facade.
 
 # Example
 
