@@ -34,7 +34,10 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketException;
 import java.nio.charset.Charset;
-import java.security.Principal;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateParsingException;
+import java.security.cert.X509Certificate;
+import java.util.Collection;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -202,17 +205,12 @@ public class ManageSieveClient {
             secureSocket = (SSLSocket) sslSocketFactory.createSocket(socket, socket.getInetAddress().getHostAddress(), socket.getPort(), true);
             if (rfcCheck) {
                 // The manage sieve rfc says we should check that the name in the certificate
-                // matches the hostname that we want.
-
-                Principal p = secureSocket.getSession().getPeerPrincipal();
-                if (p instanceof X500Principal) {
-                    String serverName = getHostnameFromCert((X500Principal) p);
-                    if (!hostname.equals(serverName)) {
-                        throw new IOException("Secure connect failed: Server name " + serverName + " doesn't match wanted " + hostname);
-                    }
-                } else {
-                    log.warn("Unexpected principle: {}", p.getName());
-                }
+                // matches the hostname that we want. RFC: http://www.ietf.org/rfc/rfc5804.txt
+            	Certificate[] peerCertificates = secureSocket.getSession().getPeerCertificates();
+            	boolean certificateMatchesHostname = hasHostnameMatchingCertificate(peerCertificates);
+            	if (!certificateMatchesHostname) {
+            		throw new IOException("Secure connect failed: non of the provided certificates matches the hostname " + hostname);
+            	}
             }
             setupAfterConnect(secureSocket);
             return parseCapabilities();
@@ -221,8 +219,54 @@ public class ManageSieveClient {
             return resp;
         }
     }
+    
+	/**
+	 * Checks whether any of the provided certificates matches the hostname that
+	 * we use to connect to.
+	 * 
+	 * @param certificates
+	 * @return true if any of the provided certificates has a matching Common Name
+	 */
+	private boolean hasHostnameMatchingCertificate(Certificate[] certificates) {
+		for (Certificate certificate : certificates) {
+			if (certificate instanceof X509Certificate) {
+				X509Certificate x509Certificate = (X509Certificate) certificate;
 
-    /**
+				// Check matching subjectAlternativeName
+				Collection<List<?>> subjectAlternativeNames = null;
+				try {
+					subjectAlternativeNames = x509Certificate.getSubjectAlternativeNames();
+				} catch (CertificateParsingException e) {
+					log.warn("Could not check certificate's subjectAlternativeNames", e);
+				}
+
+				if (subjectAlternativeNames != null) {
+					for (List<?> subjectAlternativeName : subjectAlternativeNames) {
+						log.debug("Checking subjectAlternativeName '{}' against hostname", subjectAlternativeName);
+						// TODO support wildcard hostnames
+						if (hostname.equals(subjectAlternativeName.get(1))) {
+							return true;
+						}
+					}
+				}
+
+				// Check matching CN value in subject
+				X500Principal subjectPrincipal = x509Certificate.getSubjectX500Principal();
+				String certificateCN = getHostnameFromCert(subjectPrincipal);
+				log.debug("Checking certificate CN '{}' against hostname", certificateCN);
+				// TODO support wildcard hostnames
+				if (hostname.equals(certificateCN)) {
+					return true;
+				}
+			} else {
+				log.warn("Unexpected certificate: {}", certificate.getType());
+			}
+		}
+
+		return false;
+	}
+
+	/**
      * Authenticate against the remote server using SASL.
      *
      * The CallbackHandler should be setup appropriately, for example:
