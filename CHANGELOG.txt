@@ -1,0 +1,6 @@
+
+v 0.2
+
+# Better SSL support.
+Specificaly, match alt names in certificates. Thanks Ricardo Nooijen!
+
