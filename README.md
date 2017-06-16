@@ -19,7 +19,7 @@ com.fluffypeople.managesieve.examples package.
     <dependency>
       <groupId>com.fluffypeople</groupId>
       <artifactId>managesievej</artifactId>
-      <version>0.2.0</version>
+      <version>0.2.1</version>
     </dependency>
 
 # Licence
