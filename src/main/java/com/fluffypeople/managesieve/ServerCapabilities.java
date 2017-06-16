@@ -25,6 +25,7 @@ package com.fluffypeople.managesieve;
 
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
@@ -34,17 +35,17 @@ import java.util.Set;
 public class ServerCapabilities {
 
     private String implementationName = null;
-    private Set<String> SASLMethods;
-    private Set<String> sieveExtensions;
-    private boolean tls =false;
+    private final Set<String> SASLMethods;
+    private final Set<String> sieveExtensions;
+    private boolean tls = false;
     private int maxRedirects = 0;
-    private Set<String> notify;
+    private final Set<String> notify;
     private String language = null;
     private String owner = null;
     private String version = null;
     
     public ServerCapabilities() {
-        SASLMethods = new HashSet<String>();
+        SASLMethods = new LinkedHashSet<String>();
         sieveExtensions = new HashSet<String>();
         notify = new HashSet<String>();
     }
@@ -58,6 +59,7 @@ public class ServerCapabilities {
     }
     
     public void setSASLMethods(final String raw) {
+		SASLMethods.clear();
         parseString(SASLMethods, raw);
     }
     
@@ -71,6 +73,7 @@ public class ServerCapabilities {
     }
     
     public void setSieveExtensions(final String raw) {
+		sieveExtensions.clear();
         parseString(sieveExtensions, raw);
     }
     
@@ -87,6 +90,7 @@ public class ServerCapabilities {
     }
 
     public void setNotify(final String raw) {
+		notify.clear();
         parseString(notify, raw);
     }
     
@@ -150,5 +154,3 @@ public class ServerCapabilities {
     }
         
 }
-
-
