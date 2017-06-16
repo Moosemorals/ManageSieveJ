@@ -59,7 +59,7 @@ public class ServerCapabilities {
     }
     
     public void setSASLMethods(final String raw) {
-		SASLMethods.clear();
+	SASLMethods.clear();
         parseString(SASLMethods, raw);
     }
     
@@ -73,7 +73,7 @@ public class ServerCapabilities {
     }
     
     public void setSieveExtensions(final String raw) {
-		sieveExtensions.clear();
+	sieveExtensions.clear();
         parseString(sieveExtensions, raw);
     }
     
@@ -90,7 +90,7 @@ public class ServerCapabilities {
     }
 
     public void setNotify(final String raw) {
-		notify.clear();
+	notify.clear();
         parseString(notify, raw);
     }
     
