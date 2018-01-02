@@ -5,7 +5,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.fluffypeople</groupId>
   <artifactId>managesievej</artifactId>
-  <version>0.2.1</version>
+  <version>0.2.2</version>
   <packaging>jar</packaging>
   <name>ManageSieveJ</name>
   <url>https://github.com/Moosemorals/ManageSieveJ</url>

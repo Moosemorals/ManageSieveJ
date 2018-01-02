@@ -803,7 +803,7 @@ public class ManageSieveClient {
         byteStream = new BufferedInputStream(sock.getInputStream());
         in = new StreamTokenizer(new InputStreamReader(byteStream, UTF8));
         setupTokenizer();
-        out = new PrintWriter(new OutputStreamWriter(sock.getOutputStream()));
+        out = new PrintWriter(new OutputStreamWriter(sock.getOutputStream(), UTF8));
     }
 
     private void setupTokenizer() {
