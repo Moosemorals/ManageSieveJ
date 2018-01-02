@@ -24,18 +24,20 @@
 package com.fluffypeople.managesieve;
 
 /**
- * Model a sieve script, that has either been created localy, or
+ * Model a sieve script, that has either been created locally, or
  * resides on a remote server.
+ *
  * @author "Osric Wilkinson" &lt;osric@fluffypeople.com&gt;
  */
 public class SieveScript {
-    
+
     protected String name;
     protected String body;
     protected boolean active;
-    
-    public SieveScript() {}
-    
+
+    public SieveScript() {
+    }
+
     public SieveScript(String name, String body, boolean active) {
         this.name = name;
         this.body = body;
@@ -82,10 +84,7 @@ public class SieveScript {
             return false;
         }
         final SieveScript other = (SieveScript) obj;
-        if ((this.name == null) ? (other.name != null) : !this.name.equals(other.name)) {
-            return false;
-        }
-        return true;
+        return (this.name == null) ? (other.name == null) : this.name.equals(other.name);
     }
-    
+
 }

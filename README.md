@@ -12,7 +12,7 @@ on [SLF4J][4] as its logging facade.
 
 # Example
 
-There is an example use of the libray in the 
+There is an example use of the library in the 
 com.fluffypeople.managesieve.examples package.
 
 # Maven
@@ -24,7 +24,7 @@ com.fluffypeople.managesieve.examples package.
 
 # Licence
 
-This libary is covered by the MIT licence. 
+This library is covered by the MIT licence. 
 
 # References
 

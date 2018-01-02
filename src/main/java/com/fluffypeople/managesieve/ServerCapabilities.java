@@ -29,7 +29,8 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
- * Holds deatils about the a servers capabilities.
+ * Holds details about the a servers capabilities.
+ *
  * @author "Osric Wilkinson" &lt;osric@fluffypeople.com&gt;
  */
 public class ServerCapabilities {
@@ -43,95 +44,96 @@ public class ServerCapabilities {
     private String language = null;
     private String owner = null;
     private String version = null;
-    
+
     public ServerCapabilities() {
         SASLMethods = new LinkedHashSet<String>();
         sieveExtensions = new HashSet<String>();
         notify = new HashSet<String>();
     }
-    
+
     public void setImplementationName(final String name) {
         this.implementationName = name;
     }
-    
+
     public String getImplementationName() {
         return implementationName;
     }
-    
+
     public void setSASLMethods(final String raw) {
-	SASLMethods.clear();
+        SASLMethods.clear();
         parseString(SASLMethods, raw);
     }
-    
+
     public boolean hasSASLMethod(final String method) {
         return SASLMethods.contains(method);
     }
-    
+
     public String[] getSASLMethods() {
         String[] result = new String[SASLMethods.size()];
         return SASLMethods.toArray(result);
     }
-    
+
     public void setSieveExtensions(final String raw) {
-	sieveExtensions.clear();
+        sieveExtensions.clear();
         parseString(sieveExtensions, raw);
     }
-    
+
     public boolean hasSieveExtension(final String extension) {
         return sieveExtensions.contains(extension);
     }
-    
+
     public void setHasTLS(final boolean tls) {
         this.tls = tls;
     }
-    
+
     public boolean hasTLS() {
         return tls;
     }
 
     public void setNotify(final String raw) {
-	notify.clear();
+        notify.clear();
         parseString(notify, raw);
     }
-    
+
     public void setMaxRedirects(final int maxRedirects) {
         this.maxRedirects = maxRedirects;
     }
-    
+
     public int getMaxRedirects() {
         return maxRedirects;
     }
-    
+
     public void setLanguage(final String language) {
         this.language = language;
     }
-    
+
     public String getLanguage() {
         return language;
     }
-    
+
     public void setOwner(final String owner) {
         this.owner = owner;
     }
-    
+
     public String getOwner() {
         return owner;
     }
-    
+
     public void setVersion(final String version) {
         this.version = version;
     }
-    
+
     public String getVersion() {
         return version;
     }
-       
+
     public boolean hasNoitfy(final String method) {
         return notify.contains(method.toLowerCase());
     }
-    
+
     /**
      * Checks to see if the server is valid.
+     *
      * @return boolean true if the version is 1.0, and sieve extensions and implementation
      * have been set, false otherwise
      */
@@ -142,15 +144,12 @@ public class ServerCapabilities {
         if (implementationName == null || implementationName.isEmpty()) {
             return false;
         }
-        if (sieveExtensions.isEmpty()) {
-            return false;
-        }
-        return true;
+        return !sieveExtensions.isEmpty();
     }
-    
+
     private static void parseString(final Set<String> target, final String raw) {
         String[] parts = raw.split("\\s+");
         target.addAll(Arrays.asList(parts));
     }
-        
+
 }

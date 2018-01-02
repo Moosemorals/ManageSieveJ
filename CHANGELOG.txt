@@ -1,6 +1,10 @@
+v 0.2.2 - 2017-01-02
+# Add explicit UTF-8 to output PrintWriter (Thanks blankcody)
 
-v 0.2
+Also, a bunch of random reformatting and fixing spelling mistakes
+
+v 0.2.1
 
 # Better SSL support.
-Specificaly, match alt names in certificates. Thanks Ricardo Nooijen!
+Specifically, match alt names in certificates. Thanks Ricardo Nooijen!
 

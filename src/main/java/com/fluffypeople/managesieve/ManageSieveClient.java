@@ -48,11 +48,11 @@ import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.callback.NameCallback;
 import javax.security.auth.callback.PasswordCallback;
-import javax.security.auth.callback.UnsupportedCallbackException;
 import javax.security.auth.x500.X500Principal;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
+
 import org.apache.commons.codec.binary.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -88,10 +88,8 @@ public class ManageSieveClient {
     private final static int DQUOTE_LENGTH = 1;
     private final static int MAX_ESCAPED_STRING_LENGTH = 1024;
     private Socket socket = null;
-    private SSLSocket secureSocket = null;
     private ServerCapabilities cap;
     private StreamTokenizer in;
-    private BufferedInputStream byteStream;
     private PrintWriter out;
     private String hostname;
     private int socketTimeout = 0; // Default socket timeout is zero, or don't time out.
@@ -113,14 +111,13 @@ public class ManageSieveClient {
     /**
      * Returns setting for SO_TIMEOUT. 0 returns implies that the option is
      * disabled (i.e., timeout of infinity).</p>
-     *
+     * <p>
      * If the socket isn't connected, return the cached value that will be set
      * once the socket does connect.</p>
      *
-     *
      * @return the setting for SO_TIMEOUT
      * @throws SocketException - if there is an error in the underlying
-     * protocol, such as a TCP error.
+     *                         protocol, such as a TCP error.
      * @see java.net.Socket#getSoTimeout()
      */
     public int getSocketTimeout() throws SocketException {
@@ -130,7 +127,7 @@ public class ManageSieveClient {
     /**
      * Set SO_TIMEOUT. Updates a connected socket (and is stored for use when a
      * socket connects).</p>
-     *
+     * <p>
      * From <code>Socket.setSoTimeout</code>: "Enable/disable SO_TIMEOUT with
      * the specified timeout, in milliseconds. With this option set to a
      * non-zero timeout, a read() call on the InputStream associated with this
@@ -142,8 +139,7 @@ public class ManageSieveClient {
      *
      * @param timeout the specified timeout, in milliseconds.
      * @throws SocketException if there is an error in the underlying protocol,
-     * such as a TCP error.
-     *
+     *                         such as a TCP error.
      * @see java.net.Socket#setSoTimeout(int)
      */
     public void setSocketTimeout(int timeout) throws SocketException {
@@ -157,7 +153,7 @@ public class ManageSieveClient {
      * Connect to remote server
      *
      * @return ManageSieveResponse OK on connect, NO on connection problems
-     * @throws IOException if there are underlying IO issues
+     * @throws IOException    if there are underlying IO issues
      * @throws ParseException if we can't parse the response from the server
      */
     public synchronized ManageSieveResponse connect(final String host, final int port) throws IOException, ParseException {
@@ -202,15 +198,15 @@ public class ManageSieveClient {
         sendCommand("STARTTLS");
         ManageSieveResponse resp = parseResponse();
         if (resp.isOk()) {
-            secureSocket = (SSLSocket) sslSocketFactory.createSocket(socket, socket.getInetAddress().getHostAddress(), socket.getPort(), true);
+            final SSLSocket secureSocket = (SSLSocket) sslSocketFactory.createSocket(socket, socket.getInetAddress().getHostAddress(), socket.getPort(), true);
             if (rfcCheck) {
                 // The manage sieve rfc says we should check that the name in the certificate
                 // matches the hostname that we want. RFC: http://www.ietf.org/rfc/rfc5804.txt
-            	Certificate[] peerCertificates = secureSocket.getSession().getPeerCertificates();
-            	boolean certificateMatchesHostname = hasHostnameMatchingCertificate(peerCertificates);
-            	if (!certificateMatchesHostname) {
-            		throw new IOException("Secure connect failed: non of the provided certificates matches the hostname " + hostname);
-            	}
+                Certificate[] peerCertificates = secureSocket.getSession().getPeerCertificates();
+                boolean certificateMatchesHostname = hasHostnameMatchingCertificate(peerCertificates);
+                if (!certificateMatchesHostname) {
+                    throw new IOException("Secure connect failed: non of the provided certificates matches the hostname " + hostname);
+                }
             }
             setupAfterConnect(secureSocket);
             return parseCapabilities();
@@ -219,56 +215,56 @@ public class ManageSieveClient {
             return resp;
         }
     }
-    
-	/**
-	 * Checks whether any of the provided certificates matches the hostname that
-	 * we use to connect to.
-	 * 
-	 * @param certificates
-	 * @return true if any of the provided certificates has a matching Common Name
-	 */
-	private boolean hasHostnameMatchingCertificate(Certificate[] certificates) {
-		for (Certificate certificate : certificates) {
-			if (certificate instanceof X509Certificate) {
-				X509Certificate x509Certificate = (X509Certificate) certificate;
 
-				// Check matching subjectAlternativeName
-				Collection<List<?>> subjectAlternativeNames = null;
-				try {
-					subjectAlternativeNames = x509Certificate.getSubjectAlternativeNames();
-				} catch (CertificateParsingException e) {
-					log.warn("Could not check certificate's subjectAlternativeNames", e);
-				}
-
-				if (subjectAlternativeNames != null) {
-					for (List<?> subjectAlternativeName : subjectAlternativeNames) {
-						log.debug("Checking subjectAlternativeName '{}' against hostname", subjectAlternativeName);
-						// TODO support wildcard hostnames
-						if (hostname.equals(subjectAlternativeName.get(1))) {
-							return true;
-						}
-					}
-				}
-
-				// Check matching CN value in subject
-				X500Principal subjectPrincipal = x509Certificate.getSubjectX500Principal();
-				String certificateCN = getHostnameFromCert(subjectPrincipal);
-				log.debug("Checking certificate CN '{}' against hostname", certificateCN);
-				// TODO support wildcard hostnames
-				if (hostname.equals(certificateCN)) {
-					return true;
-				}
-			} else {
-				log.warn("Unexpected certificate: {}", certificate.getType());
-			}
-		}
-
-		return false;
-	}
-
-	/**
-     * Authenticate against the remote server using SASL.
+    /**
+     * Checks whether any of the provided certificates matches the hostname that
+     * we use to connect to.
      *
+     * @param certificates
+     * @return true if any of the provided certificates has a matching Common Name
+     */
+    private boolean hasHostnameMatchingCertificate(Certificate[] certificates) {
+        for (Certificate certificate : certificates) {
+            if (certificate instanceof X509Certificate) {
+                X509Certificate x509Certificate = (X509Certificate) certificate;
+
+                // Check matching subjectAlternativeName
+                Collection<List<?>> subjectAlternativeNames = null;
+                try {
+                    subjectAlternativeNames = x509Certificate.getSubjectAlternativeNames();
+                } catch (CertificateParsingException e) {
+                    log.warn("Could not check certificate's subjectAlternativeNames", e);
+                }
+
+                if (subjectAlternativeNames != null) {
+                    for (List<?> subjectAlternativeName : subjectAlternativeNames) {
+                        log.debug("Checking subjectAlternativeName '{}' against hostname", subjectAlternativeName);
+                        // TODO support wildcard hostnames
+                        if (hostname.equals(subjectAlternativeName.get(1))) {
+                            return true;
+                        }
+                    }
+                }
+
+                // Check matching CN value in subject
+                X500Principal subjectPrincipal = x509Certificate.getSubjectX500Principal();
+                String certificateCN = getHostnameFromCert(subjectPrincipal);
+                log.debug("Checking certificate CN '{}' against hostname", certificateCN);
+                // TODO support wildcard hostnames
+                if (hostname.equals(certificateCN)) {
+                    return true;
+                }
+            } else {
+                log.warn("Unexpected certificate: {}", certificate.getType());
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Authenticate against the remote server using SASL.
+     * <p>
      * The CallbackHandler should be setup appropriately, for example:
      * <pre>
      * <code>
@@ -289,8 +285,8 @@ public class ManageSieveClient {
      * </code>
      * </pre>
      *
-     * @param cbh CallbackHandler[] list of call backs that will be called by
-     * the SASL code
+     * @param cbh    CallbackHandler[] list of call backs that will be called by
+     *               the SASL code
      * @param authId the authorization ID
      * @return ManageSieveResponse from the server, OK is authenticated, NO
      * means a problem
@@ -298,7 +294,7 @@ public class ManageSieveClient {
      * @throws IOException
      * @throws ParseException
      */
-    public synchronized ManageSieveResponse authenticate(final CallbackHandler cbh, String authId) throws SaslException, IOException, ParseException {
+    public synchronized ManageSieveResponse authenticate(final CallbackHandler cbh, String authId) throws IOException, ParseException {
 
         SaslClient sc = Sasl.createSaslClient(cap.getSASLMethods(), authId, "sieve", hostname, null, cbh);
 
@@ -314,20 +310,23 @@ public class ManageSieveClient {
 
         int token;
         ManageSieveResponse resp = null;
+        label:
         do {
             token = in.nextToken();
-            if (token == DQUOTE) {
-                // String - so more data for the auth sequence
-                in.pushBack();
-                String msg = parseString();
-                byte[] response = sc.evaluateChallenge(msg.getBytes());
-                sendLine(encodeString(new String(response)));
-            } else if (token == StreamTokenizer.TT_WORD) {
-                in.pushBack();
-                resp = parseResponse();
-                break;
-            } else {
-                throw new ParseException("Expecting DQUOTE/WORD, got " + tokenToString(token) + " at line " + in.lineno());
+            switch (token) {
+                case DQUOTE:
+                    // String - so more data for the auth sequence
+                    in.pushBack();
+                    String msg = parseString();
+                    byte[] response = sc.evaluateChallenge(msg.getBytes());
+                    sendLine(encodeString(new String(response)));
+                    break;
+                case StreamTokenizer.TT_WORD:
+                    in.pushBack();
+                    resp = parseResponse();
+                    break label;
+                default:
+                    throw new ParseException("Expecting DQUOTE/WORD, got " + tokenToString(token) + " at line " + in.lineno());
             }
         } while (!sc.isComplete());
 
@@ -344,7 +343,7 @@ public class ManageSieveClient {
      * @param password String password to authenticate with.
      * @return OK on success, NO otherwise.
      */
-    public synchronized ManageSieveResponse authenticate(final String username, final String password) throws SaslException, IOException, ParseException {
+    public synchronized ManageSieveResponse authenticate(final String username, final String password) throws IOException, ParseException {
         return authenticate(username, password, null);
     }
 
@@ -354,14 +353,14 @@ public class ManageSieveClient {
      *
      * @param username String username to authenticate with.
      * @param password String password to authenticate with.
-     * @param authId String authentication ID (may be null).
+     * @param authId   String authentication ID (may be null).
      * @return OK on success, NO otherwise.
      */
-    public synchronized ManageSieveResponse authenticate(final String username, final String password, String authId) throws SaslException, IOException, ParseException {
+    public synchronized ManageSieveResponse authenticate(final String username, final String password, String authId) throws IOException, ParseException {
         CallbackHandler cbh = new CallbackHandler() {
 
             @Override
-            public void handle(Callback[] clbcks) throws IOException, UnsupportedCallbackException {
+            public void handle(Callback[] clbcks) {
                 for (Callback cb : clbcks) {
                     if (cb instanceof NameCallback) {
                         NameCallback name = (NameCallback) cb;
@@ -383,7 +382,7 @@ public class ManageSieveClient {
      * be marked active.
      *
      * @param scripts @code{List<SieveScript>} non-null List of scripts. Will be
-     * cleared if not zero length, even if there is a problem
+     *                cleared if not zero length, even if there is a problem
      * @return ManageSieveResponse OK - list was fetched, NO - there was a
      * problem.
      * @throws IOException
@@ -462,7 +461,6 @@ public class ManageSieveClient {
      * readable" part of the response.
      * <p>
      * Even if the script is valid the response may contain WARNINGS.
-     *
      *
      * @param name String name of the script
      * @param body String body of the script
@@ -566,7 +564,7 @@ public class ManageSieveClient {
             int token = in.nextToken();
             switch (token) {
                 case StreamTokenizer.TT_WORD:
-                    // Unquoted word - end of capabilites
+                    // Unquoted word - end of capabilities
                     in.pushBack();
                     return parseResponse();
                 case DQUOTE:
@@ -606,7 +604,7 @@ public class ManageSieveClient {
                     }
                     token = in.nextToken();
                     if (token != StreamTokenizer.TT_EOL) {
-                        throw new ParseException("Expecing EOL got " + tokenToString(token) + " at " + in.lineno());
+                        throw new ParseException("Expecting EOL got " + tokenToString(token) + " at " + in.lineno());
                     }
                     break;
 
@@ -672,8 +670,7 @@ public class ManageSieveClient {
         if (token == StreamTokenizer.TT_WORD) {
             payload = null;
             response = parseResponseFromCurrentToken();
-        }
-        else {
+        } else {
             payload = parseStringFromCurrentToken();
             int nextToken = in.nextToken();
             if (nextToken != StreamTokenizer.TT_EOL) {
@@ -692,53 +689,54 @@ public class ManageSieveClient {
 
     private String parseStringFromCurrentToken() throws IOException, ParseException {
         int token = in.ttype;
-        if (token == DQUOTE) {
-            return in.sval;
-        } else if (token == '{') {
-            // "Literal" String - {<length>}CRLF<length bytes of string>
-            token = in.nextToken();
-            if (token != StreamTokenizer.TT_NUMBER) {
-                throw new ParseException("Expecting NUMBER got " + tokenToString(token) + " at line " + in.lineno());
-            }
-            // Irritatingly, the tokenizer will parse a double here, even
-            // if we only want an int. Sigh.
-            int length = (int) in.nval;
-            token = in.nextToken();
-            if (token != '}') {
-                throw new ParseException("Expecing } got " + tokenToString(token) + " at line " + in.lineno());
-            }
-            token = in.nextToken();
-            if (token != StreamTokenizer.TT_EOL) {
-                throw new ParseException("Expecting EOL got " + tokenToString(token) + " at line " + in.lineno());
-            }
-            // Drop out of the tokenizer to read the raw bytes...
-
-            StringBuilder rawString = new StringBuilder();
-            log.debug("Raw string: reading {} bytes", length);
-
-            in.resetSyntax();
-            int count = 0;
-            while (count < length) {
+        switch (token) {
+            case DQUOTE:
+                return in.sval;
+            case '{':
+                // "Literal" String - {<length>}CRLF<length bytes of string>
                 token = in.nextToken();
-                if (token == StreamTokenizer.TT_WORD) {
-                    // Tokenizer calls unicode "WORD" even in raw(ish) mode
-                    rawString.append(in.sval);
-                    count += in.sval.getBytes(UTF8).length;
-                } else {
-                    // Probably only ever one byte chars, however lets be
-                    // careful out there.
-                    char[] chars = Character.toChars(token);
-                    rawString.append(chars);
-                    count += chars.length;
+                if (token != StreamTokenizer.TT_NUMBER) {
+                    throw new ParseException("Expecting NUMBER got " + tokenToString(token) + " at line " + in.lineno());
                 }
-            }
+                // Irritatingly, the tokenizer will parse a double here, even
+                // if we only want an int. Sigh.
+                int length = (int) in.nval;
+                token = in.nextToken();
+                if (token != '}') {
+                    throw new ParseException("Expecting } got " + tokenToString(token) + " at line " + in.lineno());
+                }
+                token = in.nextToken();
+                if (token != StreamTokenizer.TT_EOL) {
+                    throw new ParseException("Expecting EOL got " + tokenToString(token) + " at line " + in.lineno());
+                }
+                // Drop out of the tokenizer to read the raw bytes...
 
-            // Remember to reset the tokenizer now we're done
-            setupTokenizer();
+                StringBuilder rawString = new StringBuilder();
+                log.debug("Raw string: reading {} bytes", length);
 
-            return rawString.toString();
-        } else {
-            throw new ParseException("Expecing DQUOTE or {, got " + tokenToString(token) + " at line " + in.lineno());
+                in.resetSyntax();
+                int count = 0;
+                while (count < length) {
+                    token = in.nextToken();
+                    if (token == StreamTokenizer.TT_WORD) {
+                        // Tokenizer calls unicode "WORD" even in raw(ish) mode
+                        rawString.append(in.sval);
+                        count += in.sval.getBytes(UTF8).length;
+                    } else {
+                        // Probably only ever one byte chars, however lets be
+                        // careful out there.
+                        char[] chars = Character.toChars(token);
+                        rawString.append(chars);
+                        count += chars.length;
+                    }
+                }
+
+                // Remember to reset the tokenizer now we're done
+                setupTokenizer();
+
+                return rawString.toString();
+            default:
+                throw new ParseException("Expecting DQUOTE or {, got " + tokenToString(token) + " at line " + in.lineno());
         }
     }
 
@@ -800,7 +798,7 @@ public class ManageSieveClient {
 
     private void setupAfterConnect(Socket sock) throws IOException {
         sock.setSoTimeout(socketTimeout);
-        byteStream = new BufferedInputStream(sock.getInputStream());
+        final BufferedInputStream byteStream = new BufferedInputStream(sock.getInputStream());
         in = new StreamTokenizer(new InputStreamReader(byteStream, UTF8));
         setupTokenizer();
         out = new PrintWriter(new OutputStreamWriter(sock.getOutputStream(), UTF8));

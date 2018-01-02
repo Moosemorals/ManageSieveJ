@@ -25,6 +25,7 @@
 package com.fluffypeople.managesieve;
 
 import java.util.Arrays;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,7 +48,7 @@ public class ManageSieveResponse {
     public enum Type {
 
         OK, NO, BYE
-    };
+    }
 
     /**
      * Primary response code.
@@ -69,7 +70,7 @@ public class ManageSieveResponse {
         extension(false);
         private final boolean hasParam;
 
-        private Code(boolean hasParam) {
+        Code(boolean hasParam) {
             this.hasParam = hasParam;
         }
 
@@ -88,6 +89,7 @@ public class ManageSieveResponse {
             }
         }
     }
+
     private Type type;
     private Code code;
     private String[] subCodes;
@@ -167,7 +169,7 @@ public class ManageSieveResponse {
         try {
             this.type = Type.valueOf(type.toUpperCase());
         } catch (IllegalArgumentException ex) {
-            throw new ParseException("Invalid response type: " + type); 
+            throw new ParseException("Invalid response type: " + type);
         }
     }
 
