@@ -168,7 +168,7 @@ public class ManageSieveClient {
      * Returns true if the underlying socket is connected.
      */
     public synchronized boolean isConnected() {
-        return socket.isConnected();
+        return socket != null && socket.isConnected();
     }
 
     /**
