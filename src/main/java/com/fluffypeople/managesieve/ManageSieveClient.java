@@ -24,12 +24,7 @@
  */
 package com.fluffypeople.managesieve;
 
-import java.io.BufferedInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
-import java.io.StreamTokenizer;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketException;
@@ -682,9 +677,15 @@ public class ManageSieveClient {
         return new ResponseAndPayload(response, payload);
     }
 
-    private String parseString() throws IOException, ParseException {
+    String parseString() throws IOException, ParseException {
         in.nextToken();
         return parseStringFromCurrentToken();
+    }
+
+    private byte[] growByteArray(byte[] array) {
+        byte[] newArray = new byte[array.length * 2];
+        System.arraycopy(array, 0, newArray, 0, array.length);
+        return newArray;
     }
 
     private String parseStringFromCurrentToken() throws IOException, ParseException {
@@ -711,30 +712,40 @@ public class ManageSieveClient {
                 }
                 // Drop out of the tokenizer to read the raw bytes...
 
-                StringBuilder rawString = new StringBuilder();
                 log.debug("Raw string: reading {} bytes", length);
-
                 in.resetSyntax();
                 int count = 0;
+                byte[] buff = new byte[1024];
+
                 while (count < length) {
                     token = in.nextToken();
-                    if (token == StreamTokenizer.TT_WORD) {
-                        // Tokenizer calls unicode "WORD" even in raw(ish) mode
-                        rawString.append(in.sval);
-                        count += in.sval.getBytes(UTF8).length;
+                    String tokenString;
+                    if (token == StreamTokenizer.TT_EOF) {
+                        // Let the caller deal with the EOF
+                        in.pushBack();
+                        break;
+                    } else if (token == StreamTokenizer.TT_WORD) {
+                        // Token is a string (StreamTokenizer calls some unicode chars strings)
+                        tokenString = in.sval;
                     } else {
-                        // Probably only ever one byte chars, however lets be
-                        // careful out there.
-                        char[] chars = Character.toChars(token);
-                        rawString.append(chars);
-                        count += chars.length;
+                        // Token is a java char, could be one or two bytes
+                        tokenString = Character.toString((char) token);
                     }
+
+                    // Add the UTF-8 bytes of tokenString to the buffer,
+                    // growing it if needed
+                    byte[] tokenBytes = tokenString.getBytes(UTF8);
+                    if (count + tokenBytes.length >= buff.length) {
+                        buff = growByteArray(buff);
+                    }
+                    System.arraycopy(tokenBytes, 0, buff, count, tokenBytes.length);
+                    count += tokenBytes.length;
                 }
 
                 // Remember to reset the tokenizer now we're done
                 setupTokenizer();
 
-                return rawString.toString();
+                return new String(buff, 0, count, UTF8);
             default:
                 throw new ParseException("Expecting DQUOTE or {, got " + tokenToString(token) + " at line " + in.lineno());
         }
@@ -804,12 +815,19 @@ public class ManageSieveClient {
         out = new PrintWriter(new OutputStreamWriter(sock.getOutputStream(), UTF8));
     }
 
+    void setupForTesting(Reader from, Writer to) {
+        in = new StreamTokenizer(from);
+        out = new PrintWriter(to);
+
+        setupTokenizer();
+    }
+
     private void setupTokenizer() {
         in.resetSyntax();
 
-        in.whitespaceChars(0x20, 0x20);
-        in.whitespaceChars(0x0A, 0x0A);
-        in.whitespaceChars(0x0D, 0x0D);
+        in.whitespaceChars(0x20, 0x20); // Space
+        in.whitespaceChars(0x0A, 0x0A); // Newline
+        in.whitespaceChars(0x0D, 0x0D); // Carriage return
 
         in.wordChars(0x23, 0x27);
         in.wordChars(0x2A, 0x5B);
