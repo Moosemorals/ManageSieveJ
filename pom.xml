@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.fluffypeople</groupId>
     <artifactId>managesievej</artifactId>
-    <version>0.3.0</version>
+    <version>0.3.1</version>
     <packaging>jar</packaging>
     <name>ManageSieveJ</name>
     <url>https://github.com/Moosemorals/ManageSieveJ</url>

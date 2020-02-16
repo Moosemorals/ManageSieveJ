@@ -1,4 +1,7 @@
 
+v0.3.1
+Better unicode support
+
 v0.3.0 - 2018-10-23
 # Fixed NPE in isConnected (Thanks MoriTanosuke)
 
