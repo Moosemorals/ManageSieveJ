@@ -127,7 +127,7 @@ public class XML {
      * Start an XML element, including attributes if any
      *
      * @param tag String name of the element
-     * @param attrib Map<String, String> holding key, value attribute pairs.
+     * @param attrib Map&lt;String, String&gt; holding key, value attribute pairs.
      * Ignored if null.
      * @return this XML document
      */
@@ -236,7 +236,7 @@ public class XML {
      *
      * @param tag String giving the name of the element
      * @param text String contents of the element.
-     * @param attrib Map<String, String> holding key, value attribute pairs.
+     * @param attrib Map&lt;String, String&gt; holding key, value attribute pairs.
      * Ignored if null.
      * @return this XML document
      */
@@ -266,7 +266,7 @@ public class XML {
     /**
      * Add an empty element to the tree
      *
-     * @param tag String givng the name of the element
+     * @param tag String giving the name of the element
      * @return this XML document
      */
     public XML add(String tag) {

@@ -24,7 +24,7 @@ public class ManageSieveClientTest {
                 {"\u0601\u0602\u0603\u0604\u0605\u061C\u06DD\u070F\u180E\u200B\u200C\u200D\u200E\u200F\u202A\u202B\u202C\u202D\u202E\u2060\u2061\u2062\u2063\u2064\u2066\u2067\u2068\u2069\u206A\u206B\u206C\u206D\u206E\u206F\uFEFF\uFFF9\uFFFA\uFFFB\uD804\uDCBD"}, // Unicode additional control characters
                 {"ÅÍÎÏ˝ÓÔ\uF8FFÒÚÆ☃¡™£¢∞§¶•ªº–≠"}, // More funky unicode
                 {"田中さんにあげて下さい"}, // Two byte chars
-                {"表ポあA鷗ŒéＢ逍Üßªąñ丂㐀\uD840\uDC00"}, // Extream unicode
+                {"表ポあA鷗ŒéＢ逍Üßªąñ丂㐀\uD840\uDC00"}, // Extreme unicode
                 {"❤️ \uD83D\uDC94 \uD83D\uDC8C \uD83D\uDC95 \uD83D\uDC9E \uD83D\uDC93 \uD83D\uDC97 \uD83D\uDC96 \uD83D\uDC98 \uD83D\uDC9D \uD83D\uDC9F \uD83D\uDC9C \uD83D\uDC9B \uD83D\uDC9A \uD83D\uDC99"}, // Emoji
                 {"בְּרֵאשִׁית, בָּרָא אֱלֹהִים, אֵת הַשָּׁמַיִם, וְאֵת הָאָרֶץ"}, // Right to left
 

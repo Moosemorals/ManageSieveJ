@@ -29,6 +29,7 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketException;
 import java.nio.charset.Charset;
+import java.nio.charset.IllegalCharsetNameException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateParsingException;
 import java.security.cert.X509Certificate;
@@ -72,7 +73,8 @@ import org.slf4j.LoggerFactory;
 public class ManageSieveClient {
 
     private static final Logger log = LoggerFactory.getLogger(ManageSieveClient.class);
-    private static final Charset UTF8 = Charset.forName("UTF-8");
+    private static final String CHARSET_PROPERTY = "sieve.charset";
+    private static final String CHARSET_DEFAULT = "UTF-8";
     private static final char DQUOTE = '"';
     private static final char LEFT_CURRLY_BRACE = '{';
     private static final char LEFT_BRACKET = '(';
@@ -88,11 +90,25 @@ public class ManageSieveClient {
     private PrintWriter out;
     private String hostname;
     private int socketTimeout = 0; // Default socket timeout is zero, or don't time out.
-
+	private final Charset charset;
+	
     /**
      * Public constructor.
      */
     public ManageSieveClient() {
+        Charset charsetTemp;
+        final String charsetName = System.getProperty(CHARSET_PROPERTY, CHARSET_DEFAULT);
+        try {
+            charsetTemp = Charset.forName(charsetName);
+            log.info("Using charset: {}", charsetName);
+        } catch (IllegalCharsetNameException e) {
+            charsetTemp = Charset.forName(CHARSET_DEFAULT);
+            log.warn("Charset {} not available, using {} instead!", charsetName, CHARSET_DEFAULT);
+        } catch (IllegalArgumentException e) {
+            charsetTemp = Charset.forName(CHARSET_DEFAULT);
+            log.warn("Invalid charset, using {} instead!", CHARSET_DEFAULT);
+        }
+        charset = charsetTemp;
     }
 
     /**
@@ -104,7 +120,7 @@ public class ManageSieveClient {
     }
 
     /**
-     * Returns setting for SO_TIMEOUT. 0 returns implies that the option is
+     * <p> Returns setting for SO_TIMEOUT. 0 returns implies that the option is
      * disabled (i.e., timeout of infinity).</p>
      * <p>
      * If the socket isn't connected, return the cached value that will be set
@@ -120,7 +136,7 @@ public class ManageSieveClient {
     }
 
     /**
-     * Set SO_TIMEOUT. Updates a connected socket (and is stored for use when a
+     * <p>Set SO_TIMEOUT. Updates a connected socket (and is stored for use when a
      * socket connects).</p>
      * <p>
      * From <code>Socket.setSoTimeout</code>: "Enable/disable SO_TIMEOUT with
@@ -129,7 +145,7 @@ public class ManageSieveClient {
      * Socket will block for only this amount of time. If the timeout expires, a
      * java.net.SocketTimeoutException is raised, though the Socket is still
      * valid. The option must be enabled prior to entering the blocking
-     * operation to have effect. The timeout must be > 0. A timeout of zero is
+     * operation to have effect. The timeout must be &gt; 0. A timeout of zero is
      * interpreted as an infinite timeout."</p>
      *
      * @param timeout the specified timeout, in milliseconds.
@@ -372,11 +388,11 @@ public class ManageSieveClient {
 
     /**
      * "This command lists the scripts the user has on the server". The results
-     * are stored into the @code{List<SieveScript>} passed in. Any existing
+     * are stored into the @code{List&lt;SieveScript&gt;} passed in. Any existing
      * contents of this list will be lost. Up to one of the scripts listed will
      * be marked active.
      *
-     * @param scripts @code{List<SieveScript>} non-null List of scripts. Will be
+     * @param scripts non-null List of scripts. Will be
      *                cleared if not zero length, even if there is a problem
      * @return ManageSieveResponse OK - list was fetched, NO - there was a
      * problem.
@@ -734,7 +750,7 @@ public class ManageSieveClient {
 
                     // Add the UTF-8 bytes of tokenString to the buffer,
                     // growing it if needed
-                    byte[] tokenBytes = tokenString.getBytes(UTF8);
+                    byte[] tokenBytes = tokenString.getBytes(charset);
                     if (count + tokenBytes.length >= buff.length) {
                         buff = growByteArray(buff);
                     }
@@ -745,7 +761,7 @@ public class ManageSieveClient {
                 // Remember to reset the tokenizer now we're done
                 setupTokenizer();
 
-                return new String(buff, 0, count, UTF8);
+                return new String(buff, 0, count, charset);
             default:
                 throw new ParseException("Expecting DQUOTE or {, got " + tokenToString(token) + " at line " + in.lineno());
         }
@@ -756,7 +772,7 @@ public class ManageSieveClient {
         result.append(DQUOTE);
         Matcher matcher = ESCAPE_RE.matcher(raw);
         String escaped = matcher.replaceAll("\\\\$1");
-        if ((escaped.getBytes(UTF8).length - DQUOTE_LENGTH) > MAX_ESCAPED_STRING_LENGTH) {
+        if ((escaped.getBytes(charset).length - DQUOTE_LENGTH) > MAX_ESCAPED_STRING_LENGTH) {
             throw new IllegalArgumentException(String.format(
                     "The maximum size of of an escaped string should be <= %d",
                     MAX_ESCAPED_STRING_LENGTH));
@@ -776,7 +792,7 @@ public class ManageSieveClient {
         StringBuilder result = new StringBuilder();
 
         result.append("{");
-        result.append(Integer.toString(raw.getBytes(UTF8).length));
+        result.append(Integer.toString(raw.getBytes(charset).length));
         result.append("+}");
         result.append(CRLF);
         result.append(raw);
@@ -810,9 +826,9 @@ public class ManageSieveClient {
     private void setupAfterConnect(Socket sock) throws IOException {
         sock.setSoTimeout(socketTimeout);
         final BufferedInputStream byteStream = new BufferedInputStream(sock.getInputStream());
-        in = new StreamTokenizer(new InputStreamReader(byteStream, UTF8));
+        in = new StreamTokenizer(new InputStreamReader(byteStream, charset));
         setupTokenizer();
-        out = new PrintWriter(new OutputStreamWriter(sock.getOutputStream(), UTF8));
+        out = new PrintWriter(new OutputStreamWriter(sock.getOutputStream(), charset));
     }
 
     void setupForTesting(Reader from, Writer to) {
